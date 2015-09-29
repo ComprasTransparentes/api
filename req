@@ -1,0 +1,8 @@
+falcon==0.3.0
+gunicorn==19.3.0
+peewee==2.6.3
+psycopg2==2.6.1
+python-mimeparse==0.1.4
+six==1.9.0
+unicodecsv==0.14.1
+wheel==0.24.0
