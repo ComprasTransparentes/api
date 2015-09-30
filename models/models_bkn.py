@@ -104,15 +104,15 @@ class Licitacion(BaseModel):
     fecha_visita_terreno = DateTimeField(null=True)
     fecha_entrega_antecedentes = DateTimeField(null=True)
 
-    adjudicacion = ForeignKeyField(Adjudicacion, null=True, related_name='licitacion')
-    comprador = ForeignKeyField(Comprador, related_name='licitaciones')
+    adjudicacion = ForeignKeyField(Adjudicacion, null=True, on_delete='CASCADE', related_name='licitacion')
+    comprador = ForeignKeyField(Comprador, on_delete='CASCADE',related_name='licitaciones')
 
     class Meta:
         db_table = 'licitacion'
 
 
 class LicitacionEstado(BaseModel):
-    licitacion = ForeignKeyField(Licitacion, related_name='estados')
+    licitacion = ForeignKeyField(Licitacion, on_delete='CASCADE',related_name='estados')
 
     estado = IntegerField()
 
@@ -124,12 +124,12 @@ class LicitacionEstado(BaseModel):
 
 
 class LicitacionItem(BaseModel):
-    adjudicacion = ForeignKeyField(AdjudicacionItem, null=True, related_name='item')
+    adjudicacion = ForeignKeyField(AdjudicacionItem, on_delete='CASCADE',null=True, related_name='item')
     cantidad = IntegerField()
     codigo_categoria = IntegerField()
     codigo_producto = IntegerField()
     descripcion = TextField()
-    licitacion = ForeignKeyField(Licitacion, related_name='items')
+    licitacion = ForeignKeyField(Licitacion, on_delete='CASCADE',related_name='items')
     nombre_categoria = TextField()
     nombre_producto = TextField()
     unidad = CharField(null=True)
@@ -154,7 +154,7 @@ class Organismo(BaseModel):
 
 
 class OrganismoUnidad(BaseModel):
-    organismo = ForeignKeyField(Organismo, related_name='unidades')
+    organismo = ForeignKeyField(Organismo, on_delete='CASCADE',related_name='unidades')
 
     codigo = IntegerField()
     nombre = CharField()
@@ -168,7 +168,7 @@ class OrganismoUnidad(BaseModel):
 
 
 class OrganismoUnidadUsuario(BaseModel):
-    unidad = ForeignKeyField(OrganismoUnidad, related_name='usuarios')
+    unidad = ForeignKeyField(OrganismoUnidad, on_delete='CASCADE',related_name='usuarios')
 
     codigo = IntegerField()
     nombre = CharField()

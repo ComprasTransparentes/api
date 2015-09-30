@@ -9,6 +9,7 @@ from models import models as models_old
 from models.models_bkn import *
 from models import models_stats
 from utils.myjson import JSONEncoderPlus
+from utils.mypeewee import ts_match
 
 
 class OrganismoItem(object):
@@ -131,3 +132,36 @@ class OrganismoItem(object):
         }
 
         resp.body = json.dumps(response, cls=JSONEncoderPlus)
+
+
+class OrganismoList(object):
+
+    ALLOWED_PARAMS = ['q']
+    MAX_RESULTS = 10
+
+    @database.atomic()
+    def on_get(self, req, resp):
+
+        # Get all compradores
+        organismos = Comprador.select(
+            Comprador.jerarquia_id.alias('id'),
+            Comprador.codigo_comprador.alias('codigo'),
+            Comprador.categoria,
+            Comprador.nombre_comprador.alias('nombre'),
+        ).distinct().order_by(Comprador.nombre_comprador.desc())
+
+        # Get page
+        q_page = req.params.get('pagina', '1')
+        q_page = max(int(q_page) if q_page.isdigit() else 1, 1)
+
+        q_q = req.params.get('q', None)
+        if q_q:
+            organismos = organismos.where(ts_match(Comprador.nombre_comprador, q_q))
+
+
+        response = {
+            'n_organismos': organismos.count(),
+            'organismos': [organismo for organismo in organismos.paginate(q_page, OrganismoList.MAX_RESULTS).dicts()]
+        }
+
+        resp.body = json.dumps(response, cls=JSONEncoderPlus, sort_keys=True)

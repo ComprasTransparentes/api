@@ -1669,6 +1669,7 @@ CREATE INDEX index_lia_monto
 
 
 
+
 -- ESTADISTICAS PARA EL HOME
 
 DROP TABLE IF EXISTS stats.sumario;

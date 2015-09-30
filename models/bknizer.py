@@ -395,6 +395,11 @@ print "Inserted %d rows" % models_bkn.LicitacionItem.select().count()
 
 print "Time: %d seconds" % (time.time()-t)
 
+print "\nDeleting invalid items..."
+with psycopg2.connect(database=db_name, host=db_host, user=db_user, password=db_pass) as connection:
+    cursor = connection.cursor()
+    cursor.execute(sql_to_str("sql/15-delete_invalid.sql"))
+
 print "\nCreating indexes for TS..."
 with psycopg2.connect(database=db_name, host=db_host, user=db_user, password=db_pass) as connection:
     cursor = connection.cursor()
