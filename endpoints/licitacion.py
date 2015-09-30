@@ -44,7 +44,18 @@ class LicitacionList(object):
     def on_get(self, req, resp):
 
         # Get all licitaciones
-        licitaciones = Licitacion.select().order_by(Licitacion.fecha_creacion.desc())
+        licitaciones = Licitacion.select(
+            Licitacion.id,
+            Licitacion.codigo,
+            Licitacion.nombre,
+            Licitacion.descripcion,
+            Licitacion.fecha_creacion,
+            Comprador.id.alias('organismo_id'),
+            Comprador.nombre_comprador.alias('organismo_nombre'),
+            Comprador.rut_unidad.alias('organismo_rut')
+        ).join(
+            Comprador
+        ).order_by(Licitacion.fecha_creacion.desc())
 
         # Get page
         q_page = req.params.get('pagina', '1')
@@ -57,7 +68,21 @@ class LicitacionList(object):
 
         response = {
             'n_licitaciones': licitaciones.count(),
-            'licitaciones': [licitacion for licitacion in licitaciones.paginate(q_page, LicitacionList.MAX_RESULTS).dicts()]
+            'licitaciones': [
+                {
+                    'id': licitacion['id'],
+                    'codigo': licitacion['codigo'],
+                    'nombre': licitacion['nombre'],
+                    'descripcion': licitacion['descripcion'],
+                    'fecha_creacion': licitacion['fecha_creacion'],
+                    'organismo': {
+                        'id': licitacion['organismo_id'],
+                        'nombre': licitacion['organismo_nombre'],
+                        'rut': licitacion['organismo_rut']
+                    }
+                }
+                for licitacion in licitaciones.paginate(q_page, LicitacionList.MAX_RESULTS).dicts()
+            ]
         }
 
         resp.body = json.dumps(response, cls=JSONEncoderPlus, sort_keys=True)
