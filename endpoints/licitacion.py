@@ -14,6 +14,9 @@ class LicitacionItem(object):
     @database.atomic()
     def on_get(self, req, resp, licitacion_id=None):
 
+        p_items = req.params.get('p_items', '1')
+        p_items = max(int(p_items) if p_items.isdigit() else 1, 1)
+
         # Get the licitacion
         try:
             if '-' in licitacion_id:
@@ -26,7 +29,13 @@ class LicitacionItem(object):
         except Licitacion.DoesNotExist:
             raise falcon.HTTPNotFound()
 
-        response = json.dumps(model_to_dict(licitacion, backrefs=True), cls=JSONEncoderPlus)
+        items = licitacion.items.order_by(SQL('id'))
+
+        response = model_to_dict(licitacion, backrefs=True)
+        response['items'] = [item for item in items.paginate(p_items, 10).dicts()]
+        response['n_items'] = items.count()
+
+        response = json.dumps(response, cls=JSONEncoderPlus, sort_keys=True)
 
         callback = req.params.get('callback', None)
         if callback:
