@@ -5,11 +5,42 @@ La API de Compras Transparentes maneja tres tipo de objetos:
 - Organismos
 - Proveedores
 
-y ofrece 4 rutas para acceder a ellos:
+Estos objetos se pueden consultar mediante consultas GET a diferentes rutas.
+
+## Listar objetos
+El listado de los objetos se obtiene de las siguientes rutas:
+- /licitacion/
+- /organismo/
+- /proveedor/
+
+Los resultados se entregan paginados, con 10 elementos por página. Para pedir una página en particular,
+se debe agregar el parámetro *pagina*. e.g.:
+```
+GET /licitacion?pagina=5
+```
+
+## Filtrar objetos
+Se puede filtrar los resultados con los siguientes parámetros:
+- q=\<términos de búsqueda\>
+
+e.g.
+```
+GET /licitacion?q=Ministerio+del+Interior
+```
+
+## Objetos por ID
+Para acceder a los objetos directamente se utilizan las rutas:
 - /licitacion/\<id\> | \<codigo de licitacion\>
 - /organismo/\<id\>
 - /proveedor/\<id\>
-- /buscar/?q=\<terminos de busqueda\>&pagina=\<numero de pagina\>
+
+e.g.
+```
+# Estas rutas son equivalentes
+GET /licitacion/336704
+GET /licitacion/5461-45-L114
+```
+
 
 ## ¿Cómo ejecutar ComprasTransparentes-API?
 
