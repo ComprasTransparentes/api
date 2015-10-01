@@ -48,7 +48,7 @@ class OrganismoItem(object):
             Licitacion.codigo,
             fn.sum(models_stats.LicitacionItemAdjudicadas.monto).alias('monto')
         ).where(
-            models_stats.LicitacionItemAdjudicadas.jerarquia_distinct == organismo.id
+            models_stats.LicitacionItemAdjudicadas.jerarquia_distinct == organismo_id
         ).join(
             Licitacion,
             on=(models_stats.LicitacionItemAdjudicadas.licitacion == Licitacion.id)
@@ -67,7 +67,7 @@ class OrganismoItem(object):
             models_stats.LicitacionItemAdjudicadas.rut_proveedor.alias('rut'),
             fn.sum(models_stats.LicitacionItemAdjudicadas.monto).alias('monto')
         ).where(
-            models_stats.LicitacionItemAdjudicadas.jerarquia_distinct == organismo.id
+            models_stats.LicitacionItemAdjudicadas.jerarquia_distinct == organismo_id
         ).group_by(
             models_stats.LicitacionItemAdjudicadas.proveedor,
             models_stats.LicitacionItemAdjudicadas.nombre_proveedor,
@@ -102,7 +102,7 @@ class OrganismoItem(object):
         ).join(
             Comprador
         ).where(
-            Comprador.jerarquia_id == organismo.id
+            Comprador.jerarquia_id == organismo_id
         ).join(
             estados,
             on=(Licitacion.id == estados.c.licitacion_id)
