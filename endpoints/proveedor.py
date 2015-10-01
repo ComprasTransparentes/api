@@ -45,7 +45,13 @@ class ProveedorItem(object):
             'top_licitaciones': [licitacion for licitacion in top_licitaciones.dicts()]
         }
 
-        resp.body = json.dumps(response, cls=JSONEncoderPlus, sort_keys=True)
+        response = json.dumps(response, cls=JSONEncoderPlus, sort_keys=True)
+
+        callback = req.params.get('callback', None)
+        if callback:
+            response = "%s(%s)" % (callback, response)
+
+        resp.body = response
 
 
 class ProveedorList(object):

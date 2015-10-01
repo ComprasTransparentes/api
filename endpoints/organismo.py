@@ -131,7 +131,13 @@ class OrganismoItem(object):
             # 'cantidad_proveedores': 123
         }
 
-        resp.body = json.dumps(response, cls=JSONEncoderPlus)
+        response = json.dumps(response, cls=JSONEncoderPlus, sort_keys=True)
+
+        callback = req.params.get('callback', None)
+        if callback:
+            response = "%s(%s)" % (callback, response)
+
+        resp.body = response
 
 
 class OrganismoList(object):
