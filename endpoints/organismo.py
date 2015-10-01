@@ -35,6 +35,7 @@ class OrganismoItem(object):
             raise falcon.HTTPNotFound()
 
         response = model_to_dict(organismo, backrefs=False)
+        response['id'] = response['jerarquia_id']
 
         codigo_producto = req.params.get('producto', None)
         if codigo_producto and codigo_producto.isdigit():
