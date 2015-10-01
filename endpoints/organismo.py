@@ -21,7 +21,7 @@ class OrganismoItem(object):
 
         # Get the organismo
         try:
-            organismo = Comprador.get(Comprador.id == organismo_id)
+            organismo = Comprador.get(Comprador.jerarquia_id == organismo_id)
             # organismo = models_old.JerarquiaDistinct.select(
             #     models_old.JerarquiaDistinct.id,
             #     models_old.JerarquiaDistinct.codigo_organismo.alias('codigo'),
