@@ -157,7 +157,7 @@ class OrganismoList(object):
             models_old.Jerarquia.codigo_organismo.alias('codigo'),
             models_old.Jerarquia.nombre_ministerio.alias('categoria'),
             models_old.Jerarquia.nombre_organismo.alias('nombre'),
-        ).distinct().order_by(models_old.Jerarquia.nombre_organismo)
+        ).distinct()
 
         # Get page
         q_page = req.params.get('pagina', '1')
@@ -165,12 +165,12 @@ class OrganismoList(object):
 
         q_q = req.params.get('q', None)
         if q_q:
-            organismos = organismos.where(ts_match(Comprador.nombre_comprador, q_q))
+            organismos = organismos.where(ts_match(models_old.Jerarquia.nombre_organismo, q_q) | ts_match(models_old.Jerarquia.nombre_ministerio, q_q))
 
 
         response = {
             'n_organismos': organismos.count(),
-            'organismos': [organismo for organismo in organismos.paginate(q_page, OrganismoList.MAX_RESULTS).dicts()]
+            'organismos': [organismo for organismo in organismos.order_by(models_old.Jerarquia.nombre_organismo).paginate(q_page, OrganismoList.MAX_RESULTS).dicts()]
         }
 
         resp.body = json.dumps(response, cls=JSONEncoderPlus, sort_keys=True)
