@@ -26,7 +26,11 @@ class LicitacionItem(object):
         except Licitacion.DoesNotExist:
             raise falcon.HTTPNotFound()
 
-        response = json.dumps(model_to_dict(licitacion, backrefs=True), cls=JSONEncoderPlus)
+        response = model_to_dict(licitacion, backrefs=True)
+        response['comprador']['id'] = response['comprador']['jerarquia_id']
+        response['n_items'] = licitacion.items.count()
+
+        response = json.dumps(response, cls=JSONEncoderPlus, sort_keys=True)
 
         callback = req.params.get('callback', None)
         if callback:

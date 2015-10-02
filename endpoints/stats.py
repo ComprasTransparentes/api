@@ -7,6 +7,7 @@ import unicodecsv as csv
 from playhouse.shortcuts import model_to_dict, cast
 
 from models.models_stats import *
+from models import models as models_old
 from models import models_bkn
 from utils.myjson import JSONEncoderPlus
 
@@ -18,23 +19,23 @@ class StatsItem(object):
 
         if datatype == '0':
 
-            sumario = Sumario.select().first()
+            response = {
+                'monto_transado': int(MasterPlop.select(fn.sum(MasterPlop.monto).alias('monto')).get().monto),
+                'n_licitaciones': LicitacionMaster.select().count(),
+                'n_organismos': models_old.Jerarquia.select().count(),
+                'n_proveedores': models_bkn.Proveedor.select().count()
+            }
 
-            resp.body = json.dumps(model_to_dict(sumario), cls=JSONEncoderPlus)
+            resp.body = json.dumps(response, cls=JSONEncoderPlus, sort_keys=True)
 
-        if datatype == '1':
+        elif datatype == '1':
 
-            gasto_organismos = GastoOrganismo.select(
-                GastoOrganismo.nombre_categoria.concat('-').concat(GastoOrganismo.nombre_organismo).alias('nombre'),
-                fn.sum(cast(GastoOrganismo.monto, 'bigint')).alias('monto')
-            ).group_by(
-                SQL('nombre')
+            gasto_organismos = MinisterioOrganismoMonto.select(
+                MinisterioOrganismoMonto.nombre_ministerio.concat('-').concat(MinisterioOrganismoMonto.nombre_organismo).alias('nombre'),
+                cast(MinisterioOrganismoMonto.monto, 'bigint').alias('monto')
             ).order_by(
                 SQL('nombre')
             )
-
-            #gasto_organismo_region_anos = GastoOrganismo.select().order_by(GastoOrganismo.nombre, GastoOrganismo.region, GastoOrganismo.ano)
-
 
             output = BytesIO()
             csvwriter = csv.writer(output, encoding='utf-8')
@@ -48,60 +49,8 @@ class StatsItem(object):
             output.seek(0)
             resp.stream = output
 
-        elif datatype == '2':
-
-            organismos = GastoOrganismo.select(
-                GastoOrganismo.nombre_categoria
-            ).distinct().order_by(
-                GastoOrganismo.nombre_categoria
-            )
-
-            anos = GastoOrganismo.select(
-                GastoOrganismo.ano
-            ).where(
-                GastoOrganismo.ano != None
-            ).distinct().order_by(
-                GastoOrganismo.ano
-            )
-
-            gasto_organismos = GastoOrganismo.select(
-                GastoOrganismo.nombre_categoria,
-                GastoOrganismo.ano,
-                fn.sum(cast(GastoOrganismo.monto, 'bigint')).alias('monto')
-            ).where(
-                GastoOrganismo.ano != None
-            ).group_by(
-                GastoOrganismo.nombre_categoria,
-                GastoOrganismo.ano
-            ).order_by(
-                GastoOrganismo.nombre_categoria,
-                GastoOrganismo.ano
-            )
-
-            d_anos = {}
-            for index, ano in enumerate(anos.tuples()):
-                d_anos[ano[0]] = index+1
-
-            d_nombres = {}
-            for o in organismos.tuples():
-                d_nombres[o[0]] = [o[0]]+[0]*(len(d_anos))
-            for go in gasto_organismos.tuples():
-                d_nombres[go[0]][d_anos[go[1]]] = go[2]
-
-            response = {
-                'data': {
-                    'columns': [v for k, v in iter(sorted(d_nombres.iteritems()))],
-                    'type': 'bar',
-                },
-                'grid': {
-                    'y': {
-                        'lines': [{'value': 0}]
-                    }
-                },
-                'bindto': '#graph2'
-            }
-
-            resp.body = json.dumps(response, cls=JSONEncoderPlus)
+        else:
+            raise falcon.HTTPNotFound()
 
 
 class StatsTop(object):
@@ -110,16 +59,17 @@ class StatsTop(object):
     def on_get(self, req, resp, datatype=None):
 
         if datatype in ['licitacion', 'licitaciones']:
-            top_licitaciones = TopLicitaciones.select(
+
+            top_licitaciones = LicitacionMonto.select(
                 models_bkn.Licitacion.id,
-                TopLicitaciones.codigo_licitacion.alias('codigo'),
+                models_bkn.Licitacion.codigo,
                 models_bkn.Licitacion.nombre,
-                TopLicitaciones.monto,
+                cast(LicitacionMonto.monto, 'bigint')
             ).join(
                 models_bkn.Licitacion,
-                on=(TopLicitaciones.codigo_licitacion == models_bkn.Licitacion.codigo)
+                on=(LicitacionMonto.licitacion_codigo == models_bkn.Licitacion.codigo)
             ).order_by(
-                TopLicitaciones.monto.desc()
+                LicitacionMonto.monto.desc()
             ).limit(5)
 
             response = {
@@ -129,17 +79,18 @@ class StatsTop(object):
             resp.body = json.dumps(response, cls=JSONEncoderPlus)
 
         elif datatype in ['proveedor', 'proveedores']:
-            top_proveedores = VentasProveedor.select(
+
+            top_proveedores = ProveedorMonto.select(
                 models_bkn.Proveedor.id,
                 models_bkn.Proveedor.nombre,
                 models_bkn.Proveedor.rut,
-                VentasProveedor.monto,
+                cast(ProveedorMonto.monto, 'bigint').alias('monto')
             ).join(
                 models_bkn.Proveedor,
-                on=(VentasProveedor.id_proveedor == models_bkn.Proveedor.id)
+                on=(ProveedorMonto.company == models_bkn.Proveedor.id)
             ).order_by(
-                VentasProveedor.monto.desc()
-            ).limit(5)
+                ProveedorMonto.monto.desc()
+            ).limit(10)
 
             response = {
                 'top_proveedores': [proveedor for proveedor in top_proveedores.dicts()]
@@ -148,11 +99,12 @@ class StatsTop(object):
             resp.body = json.dumps(response, cls=JSONEncoderPlus)
 
         elif datatype in ['categoria', 'categorias']:
-            top_categorias = TopCategorias.select(
-                TopCategorias.categoria,
-                TopCategorias.monto
+
+            top_categorias = CategoriaMonto.select(
+                CategoriaMonto.categoria_tercer_nivel.alias('categoria'),
+                cast(CategoriaMonto.monto, 'bigint')
             ).order_by(
-                TopCategorias.monto.desc()
+                CategoriaMonto.monto.desc()
             ).limit(5)
 
             response = {

@@ -32,7 +32,7 @@ class Adjudicacion(BaseModel):
 
 
 class Proveedor(BaseModel):
-    nombre = CharField()
+    nombre = CharField(null=True)
     rut = CharField(null=True)
 
     class Meta:

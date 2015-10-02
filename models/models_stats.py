@@ -21,100 +21,150 @@ class BaseModel(Model):
         schema = db_schema_stats
 
 
-class GastoOrganismo(BaseModel):
-    nombre_categoria = CharField(null=True)
+class CategoriaMonto(BaseModel):
+    categoria_tercer_nivel = CharField(null=True)
+    monto = FloatField(null=True)
+
+    class Meta:
+        db_table = 'categoria_monto'
+
+
+class CategoriaRegionSemestreMonto(BaseModel):
+    categoria = CharField(null=True)
+    monto = FloatField(null=True)
+    region = CharField(null=True)
+    semestre = TextField(null=True)
+
+    class Meta:
+        db_table = 'categoria_region_semestre_monto'
+
+
+class LicitacionMaster(BaseModel):
+    adjudicacion = IntegerField(db_column='adjudicacion_id', null=True)
+    cargo_usuario = CharField(null=True)
+    codigo_unidad = CharField(null=True)
+    codigo_usuario = CharField(null=True)
+    comuna_unidad = CharField(null=True)
+    descripcion = TextField(null=True)
+    direccion_unidad = CharField(null=True)
+    email_responsable_contrato = CharField(null=True)
+    email_responsable_pago = CharField(null=True)
+    fecha_acto_apertura_economica = DateTimeField(null=True)
+    fecha_acto_apertura_tecnica = DateTimeField(null=True)
+    fecha_adjudicacion = DateTimeField(null=True)
+    fecha_cierre = DateTimeField(null=True)
+    fecha_creacion = DateTimeField(null=True)
+    fecha_entrega_antecedentes = DateTimeField(null=True)
+    fecha_estimada_adjudicacion = DateTimeField(null=True)
+    fecha_estimada_firma = DateTimeField(null=True)
+    fecha_final = DateTimeField(null=True)
+    fecha_inicio = DateTimeField(null=True)
+    fecha_pub_respuestas = DateTimeField(null=True)
+    fecha_publicacion = DateTimeField(null=True)
+    fecha_soporte_fisico = DateTimeField(null=True)
+    fecha_tiempo_evaluacion = DateTimeField(null=True)
+    fecha_visita_terreno = DateTimeField(null=True)
+    fechas_usuario = DateTimeField(null=True)
+    fono_responsable_contrato = CharField(null=True)
+    idministerio = IntegerField(null=True)
+    idorganismo = IntegerField(null=True)
+    licitacion_codigo = CharField(null=True)
+    licitacion = IntegerField(db_column='licitacion_id', null=True)
+    moneda = CharField(null=True)
+    nombre = TextField(null=True)
+    nombre_ministerio = CharField(null=True)
     nombre_organismo = CharField(null=True)
-    monto = IntegerField(null=True)
+    nombre_organismo_plot = CharField(null=True)
+    nombre_responsable_contrato = CharField(null=True)
+    nombre_responsable_pago = CharField(null=True)
+    nombre_unidad = CharField(null=True)
+    nombre_usuario = CharField(null=True)
+    organismo = IntegerField(db_column='organismo_id', null=True)
+    region_unidad = CharField(null=True)
+    rut_usuario = CharField(null=True)
+    tipo = CharField(null=True)
+
+    class Meta:
+        db_table = 'licitacion_master'
+
+
+class LicitacionMonto(BaseModel):
+    licitacion_codigo = CharField(null=True)
+    monto = FloatField(null=True)
+
+    class Meta:
+        db_table = 'licitacion_monto'
+
+
+class LicitacionRegionSemestreMonto(BaseModel):
+    licitacion_codigo = CharField(null=True)
+    monto = FloatField(null=True)
     region = CharField(null=True)
+    semestre = TextField(null=True)
+
+    class Meta:
+        db_table = 'licitacion_region_semestre_monto'
+
+
+class MasterPlop(BaseModel):
     ano = IntegerField(null=True)
-
-    class Meta:
-        db_table = 'gasto_organismo'
-        primary_key = False
-
-
-class TopCategorias(BaseModel):
-    categoria = CharField(null=True)
-    monto = IntegerField(null=True)
-
-    class Meta:
-        db_table = 'top_categorias'
-
-
-class TopCategoriasRegionSemestre(BaseModel):
-    categoria = CharField(null=True)
-    monto = IntegerField(null=True)
+    categoria = CharField(db_column='categoria_id', null=True)
+    categoria_primer_nivel = CharField(null=True)
+    categoria_segundo_nivel = CharField(null=True)
+    categoria_tercer_nivel = CharField(null=True)
+    codigo_categoria = IntegerField(null=True)
+    codigo_producto = IntegerField(null=True)
+    company = IntegerField(db_column='company_id', null=True)
+    licitacion_codigo = CharField(null=True)
+    licitacion = IntegerField(db_column='licitacion_id', null=True)
+    licitacion_item = IntegerField(db_column='licitacion_item_id', null=True)
+    mes = IntegerField(null=True)
+    ministerio = IntegerField(db_column='ministerio_id', null=True)
+    monto = FloatField(null=True)
+    nombre = CharField(null=True)
+    nombre_ministerio = CharField(null=True)
+    nombre_organismo = CharField(null=True)
+    nombre_producto = CharField(null=True)
+    organismo = IntegerField(db_column='organismo_id', null=True)
     region = CharField(null=True)
-    semestre = CharField(null=True)
+    rut_sucursal = CharField(null=True)
 
     class Meta:
-        db_table = 'top_categorias_region_semestre'
+        db_table = 'master_plop'
 
 
-class TopLicitaciones(BaseModel):
-    codigo_licitacion = CharField(null=True)
-    monto = IntegerField(null=True)
+class MinisterioOrganismoMonto(BaseModel):
+    monto = FloatField(null=True)
+    nombre_ministerio = CharField(null=True)
+    nombre_organismo = CharField(null=True)
 
     class Meta:
-        db_table = 'top_licitaciones'
+        db_table = 'ministerio_organismo_monto'
 
 
-class TopLicitacionesRegion(BaseModel):
-    codigo_licitacion = CharField(null=True)
-    monto = IntegerField(null=True)
+class MinisterioOrganismoRegionSemestreMonto(BaseModel):
+    monto = FloatField(null=True)
+    nombre_ministerio = CharField(null=True)
+    nombre_organismo = CharField(null=True)
     region = CharField(null=True)
-    semestre = CharField(null=True)
-    codigo_semestre = CharField()
+    semestre = TextField(null=True)
 
     class Meta:
-        db_table = 'top_licitaciones_region'
+        db_table = 'ministerio_organismo_region_semestre_monto'
 
 
-class VentasProveedor(BaseModel):
-    id_proveedor = IntegerField()
-    monto = IntegerField()
-
-    class Meta:
-        db_table = 'ventas_proveedor'
-
-
-class VentasProveedorSemestre(BaseModel):
-    id_proveedor = CharField(null=True)
-    monto = IntegerField(null=True)
-    semestre = CharField(null=True)
+class ProveedorMonto(BaseModel):
+    company = IntegerField(db_column='company_id', null=True)
+    monto = FloatField(null=True)
 
     class Meta:
-        db_table = 'ventas_proveedor_semestre'
+        db_table = 'proveedor_monto'
 
 
-class LicitacionItemAdjudicadas(BaseModel):
-    licitacion = IntegerField(db_column='licitacion_id')
-    licitacion_item = IntegerField(db_column='licitacion_item_id')
-
-    jerarquia_distinct = IntegerField(db_column='jerarquia_distinct_id')
-
-    codigo_categoria = IntegerField()
-    nombre_categoria = CharField()
-    codigo_producto = IntegerField()
-    nombre_producto = CharField()
-
-    proveedor = IntegerField(db_column='proveedor_id')
-    nombre_proveedor = CharField(null=True)
-    rut_proveedor = CharField(null=True)
-
-    monto = BigIntegerField()
+class ProveedorRegionSemestreMonto(BaseModel):
+    company = IntegerField(db_column='company_id', null=True)
+    monto = FloatField(null=True)
+    semestre = TextField(null=True)
 
     class Meta:
-        db_table = 'licitacion_item_adjudicadas'
-        primary_key = False
-
-
-class Sumario(BaseModel):
-    monto_transado = IntegerField()
-    n_licitaciones = IntegerField()
-    n_organismo = IntegerField()
-    n_proveedores = IntegerField()
-
-    class Meta:
-        db_table = 'sumario'
-        primary_key = False
+        db_table = 'proveedor_region_semestre_monto'
