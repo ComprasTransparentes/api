@@ -23,26 +23,61 @@ class ProveedorItem(object):
 
         response = model_to_dict(proveedor, backrefs=False)
 
-        top_licitaciones = models_stats.LicitacionItemAdjudicadas.select(
-            models_stats.LicitacionItemAdjudicadas.licitacion.alias('id'),
-            Licitacion.nombre,
-            Licitacion.codigo,
-            fn.sum(models_stats.LicitacionItemAdjudicadas.monto).alias('monto')
-        ).where(
-            models_stats.LicitacionItemAdjudicadas.proveedor == proveedor.id,
-        ).join(
-            Licitacion,
-            on=(models_stats.LicitacionItemAdjudicadas.licitacion == Licitacion.id)
+        monto_adjudicado = models_stats.MasterPlop.select(
+            models_stats.MasterPlop.company,
+            fn.sum(models_stats.MasterPlop.monto).alias('monto')
         ).group_by(
-            models_stats.LicitacionItemAdjudicadas.licitacion,
-            Licitacion.nombre,
-            Licitacion.codigo,
-        ).order_by(
-            SQL('monto').desc()
+            models_stats.MasterPlop.company
+        ).where(
+            models_stats.MasterPlop.company == proveedor_id
+        ).first().monto
+
+        licitacion_monto_adjudicado = models_stats.MasterPlop.select(
+            models_stats.MasterPlop.licitacion.alias('id'),
+            fn.sum(models_stats.MasterPlop.monto).alias('monto_adjudicado')
+        ).group_by(
+            SQL('id')
+        ).where(
+            models_stats.MasterPlop.company == proveedor_id
+        ).alias('monto_adjudicado')
+
+        licitacion_monto_total = models_stats.MasterPlop.select(
+            models_stats.MasterPlop.licitacion.alias('id'),
+            fn.sum(models_stats.MasterPlop.monto).alias('monto_total')
+        ).group_by(
+            SQL('id')
+        ).alias('monto_total')
+
+        licitaciones = models_stats.LicitacionMaster.select(
+            models_stats.LicitacionMaster.licitacion.alias('id'),
+            models_stats.LicitacionMaster.nombre,
+            models_stats.LicitacionMaster.licitacion_codigo.alias('codigo'),
+            licitacion_monto_adjudicado.c.monto_adjudicado,
+            licitacion_monto_total.c.monto_total
+        ).join(
+            licitacion_monto_adjudicado,
+            on=(models_stats.LicitacionMaster.licitacion == licitacion_monto_adjudicado.c.id)
+        ).join(
+            licitacion_monto_total,
+            on=(models_stats.LicitacionMaster.licitacion == licitacion_monto_total.c.id)
+        )
+
+        top_licitaciones = licitaciones.order_by(
+            licitacion_monto_adjudicado.c.monto_adjudicado.desc()
         ).limit(10)
 
+        licitaciones = licitaciones.order_by(
+            models_stats.LicitacionMaster.fecha_creacion.desc()
+        )
+
+        p_licitaciones = req.params.get('p_items', '1')
+        p_licitaciones = max(int(p_licitaciones) if p_licitaciones.isdigit() else 1, 1)
+
         response['extra'] = {
-            'top_licitaciones': [licitacion for licitacion in top_licitaciones.dicts()]
+            'monto_adjudicado': monto_adjudicado,
+            'top_licitaciones': [licitacion for licitacion in top_licitaciones.dicts()],
+            'n_licitaciones': licitaciones.count(),
+            'licitaciones': [licitacion for licitacion in licitaciones.paginate(p_licitaciones, 10).dicts()]
         }
 
         response = json.dumps(response, cls=JSONEncoderPlus, sort_keys=True)

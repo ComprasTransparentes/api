@@ -75,22 +75,23 @@ class Currency(BaseModel):
         db_table = 'currency'
 
 
+class Ministerio(BaseModel):
+    nombre = CharField(db_column='name')
+
+    class Meta:
+        db_table = 'ministerios'
+
+
 class Jerarquia(BaseModel):
-    codigo_organismo = IntegerField()
-    nombre_categoria = CharField()
-    nombre_organismo = CharField(null=True)
+    id = PrimaryKeyField(db_column='idorganismo')
+    ministerio_id = ForeignKeyField(Ministerio, db_column='idministerio')
+    nombre_ministerio = CharField(db_column='name')
+    codigo_organismo = CharField(db_column='company_code', unique=True)
+    nombre_organismo = CharField(db_column='sub_name')
+    nombre_organismo_corto = CharField(db_column='sub_name_plot')
 
     class Meta:
-        db_table = 'jerarquia'
-
-
-class JerarquiaDistinct(BaseModel):
-    codigo_organismo = IntegerField()
-    nombre_categoria = CharField()
-    nombre_organismo = CharField(null=True)
-
-    class Meta:
-        db_table = 'jerarquia_distinct'
+        db_table = 'jerarquia_final'
 
 
 class OrderDates(BaseModel):

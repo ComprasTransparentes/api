@@ -34,6 +34,7 @@ class LicitacionItem(object):
         response = model_to_dict(licitacion, backrefs=True)
         response['items'] = [model_to_dict(item, backrefs=True) for item in items.paginate(p_items, 10).iterator()]
         response['n_items'] = items.count()
+        response['comprador']['id'] = response['comprador']['jerarquia_id']
 
         response = json.dumps(response, cls=JSONEncoderPlus, sort_keys=True)
 

@@ -21,62 +21,65 @@ class OrganismoItem(object):
 
         # Get the organismo
         try:
-            organismo = Comprador.get(Comprador.jerarquia_id == organismo_id)
-            # organismo = models_old.JerarquiaDistinct.select(
-            #     models_old.JerarquiaDistinct.id,
-            #     models_old.JerarquiaDistinct.codigo_organismo.alias('codigo'),
-            #     models_old.JerarquiaDistinct.nombre_categoria.alias('categoria'),
-            #     models_old.JerarquiaDistinct.nombre_organismo.alias('nombre')
-            # ).where(
-            #     models_old.JerarquiaDistinct.id == organismo_id
-            # )
+
+            organismo = models_old.Jerarquia.select(
+                models_old.Jerarquia.id,
+                models_old.Jerarquia.nombre_ministerio.alias('categoria'),
+                models_old.Jerarquia.codigo_organismo.alias('codigo_comprador'),
+                models_old.Jerarquia.nombre_organismo.alias('nombre_comprador'),
+            ).where(models_old.Jerarquia.id == organismo_id).first()
 
         except Comprador.DoesNotExist:
             raise falcon.HTTPNotFound()
 
-        response = model_to_dict(organismo, backrefs=False)
-        response['id'] = response['jerarquia_id']
-
-        codigo_producto = req.params.get('producto', None)
-        if codigo_producto and codigo_producto.isdigit():
-            codigo_producto = int(codigo_producto)
+        response = {
+            'id': organismo.id,
+            'categoria': organismo.categoria,
+            'codigo_comprador': organismo.codigo_comprador,
+            'nombre_comprador': organismo.nombre_comprador
+        }
 
         # Top licitaciones adjudicadas
-        top_licitaciones = models_stats.LicitacionItemAdjudicadas.select(
-            models_stats.LicitacionItemAdjudicadas.licitacion.alias('id'),
-            Licitacion.nombre,
-            Licitacion.codigo,
-            fn.sum(models_stats.LicitacionItemAdjudicadas.monto).alias('monto')
-        ).where(
-            models_stats.LicitacionItemAdjudicadas.jerarquia_distinct == organismo_id
-        ).join(
-            Licitacion,
-            on=(models_stats.LicitacionItemAdjudicadas.licitacion == Licitacion.id)
+        top_licitaciones_global = models_stats.MasterPlop.select(
+            models_stats.MasterPlop.licitacion.alias('id'),
+            fn.sum(models_stats.MasterPlop.monto).alias('monto'),
         ).group_by(
-            models_stats.LicitacionItemAdjudicadas.licitacion,
-            Licitacion.nombre,
-            Licitacion.codigo
+            models_stats.MasterPlop.licitacion
         ).order_by(
             SQL('monto').desc()
-        ).limit(10)
+        ).alias('top_licitaciones_global')
+
+        top_licitaciones = models_stats.LicitacionMaster.select(
+            top_licitaciones_global.c.id,
+            models_stats.LicitacionMaster.licitacion_codigo.alias('codigo'),
+            models_stats.LicitacionMaster.nombre,
+            top_licitaciones_global.c.monto
+        ).join(
+            top_licitaciones_global,
+            on=(models_stats.LicitacionMaster.licitacion == top_licitaciones_global.c.id)
+        ).where(
+            models_stats.LicitacionMaster.idorganismo == organismo_id
+        ).order_by(
+            SQL('monto').desc()
+        )
 
         # Top proveedores
-        top_proveedores = models_stats.LicitacionItemAdjudicadas.select(
-            models_stats.LicitacionItemAdjudicadas.proveedor.alias('id'),
-            models_stats.LicitacionItemAdjudicadas.nombre_proveedor.alias('nombre'),
-            models_stats.LicitacionItemAdjudicadas.rut_proveedor.alias('rut'),
-            fn.sum(models_stats.LicitacionItemAdjudicadas.monto).alias('monto')
-        ).where(
-            models_stats.LicitacionItemAdjudicadas.jerarquia_distinct == organismo_id
+        top_proveedores = models_stats.MasterPlop.select(
+            models_stats.MasterPlop.company.alias('id'),
+            models_stats.MasterPlop.nombre,
+            models_stats.MasterPlop.rut_sucursal.alias('rut'),
+            fn.sum(models_stats.MasterPlop.monto).alias('monto')
         ).group_by(
-            models_stats.LicitacionItemAdjudicadas.proveedor,
-            models_stats.LicitacionItemAdjudicadas.nombre_proveedor,
-            models_stats.LicitacionItemAdjudicadas.rut_proveedor
+            models_stats.MasterPlop.company,
+            models_stats.MasterPlop.nombre,
+            models_stats.MasterPlop.rut_sucursal
+        ).where(
+            models_stats.MasterPlop.organismo == organismo_id
         ).order_by(
             SQL('monto').desc()
         ).limit(10)
 
-        # Latest licitaciones
+        # Licitaciones
         estados_recientes = LicitacionEstado.select(
             LicitacionEstado.licitacion,
             fn.max(LicitacionEstado.fecha)
@@ -84,46 +87,45 @@ class OrganismoItem(object):
             LicitacionEstado.licitacion
         ).alias('estados_recientes')
 
-        estados = LicitacionEstado.select(
+        licitacion_estados = LicitacionEstado.select(
             LicitacionEstado.licitacion,
             LicitacionEstado.estado,
             LicitacionEstado.fecha
         ).join(
             estados_recientes,
             on=(LicitacionEstado.licitacion == estados_recientes.c.licitacion_id)
-        ).alias('estados')
+        ).alias('licitacion_estados')
 
-        licitaciones = Licitacion.select(
-            Licitacion.id,
-            Licitacion.nombre,
-            Licitacion.codigo,
-            Licitacion.fecha_creacion,
-            estados.c.estado,
+        licitaciones = models_stats.LicitacionMaster.select(
+            models_stats.LicitacionMaster.licitacion.alias('id'),
+            models_stats.LicitacionMaster.licitacion_codigo.alias('codigo'),
+            models_stats.LicitacionMaster.nombre.alias('nombre'),
+            models_stats.LicitacionMaster.fecha_creacion,
+            licitacion_estados.c.estado.alias('estado')
         ).join(
-            Comprador
+            licitacion_estados,
+            on=(models_stats.LicitacionMaster.licitacion == licitacion_estados.c.licitacion_id)
         ).where(
-            Comprador.jerarquia_id == organismo_id
-        ).join(
-            estados,
-            on=(Licitacion.id == estados.c.licitacion_id)
+            models_stats.LicitacionMaster.idorganismo == organismo_id
         ).order_by(
-            Licitacion.fecha_creacion.desc()
-        ).limit(10)
+            models_stats.LicitacionMaster.fecha_creacion.desc()
+        )
 
-        # licitacion_items_producto = models_stats.LicitacionItemAdjudicadas.select(
-        #     models_stats.LicitacionItemAdjudicadas.licitacion,
-        #     fn.sum(models_stats.LicitacionItemAdjudicadas.monto).alias('monto')
-        # ).where(
-        #     models_stats.LicitacionItemAdjudicadas.jerarquia_distinct == organismo.jerarquia_id,
-        #     (models_stats.LicitacionItemAdjudicadas.codigo_producto == codigo_producto) if codigo_producto else SQL('1 = 1')
-        # ).group_by(
-        #     models_stats.LicitacionItemAdjudicadas.licitacion
-        # )
+        licitaciones_adjudicadas = licitaciones.where(
+            SQL('estado') == 8
+        )
+
+        p_licitaciones = req.params.get('p_items', '1')
+        p_licitaciones = max(int(p_licitaciones) if p_licitaciones.isdigit() else 1, 1)
 
         response['extra'] = {
-            'top_licitaciones': [licitacion for licitacion in top_licitaciones.dicts()],
+            'top_licitaciones': [licitacion for licitacion in top_licitaciones.paginate(1, 10).dicts()],
             'top_proveedores': [proveedor for proveedor in top_proveedores.dicts()],
-            'licitaciones': [licitacion for licitacion in licitaciones.dicts()],
+            'licitaciones': [licitacion for licitacion in licitaciones.paginate(p_licitaciones, 10).dicts()],
+            'n_licitaciones': licitaciones.count(),
+            'n_licitaciones_adjudicadas': licitaciones_adjudicadas.count(),
+            'monto_adjudicado': int(top_licitaciones.select(fn.sum(SQL('monto')).alias('monto')).first().monto),
+
 
             # 'cantidad_licitaciones': licitacion_items_producto.count(),
             # 'cantidad_licitaciones_adjudicadas': 123,
@@ -149,13 +151,13 @@ class OrganismoList(object):
     @database.atomic()
     def on_get(self, req, resp):
 
-        # Get all compradores
-        organismos = Comprador.select(
-            Comprador.jerarquia_id.alias('id'),
-            Comprador.codigo_comprador.alias('codigo'),
-            Comprador.categoria,
-            Comprador.nombre_comprador.alias('nombre'),
-        ).distinct().order_by(Comprador.nombre_comprador.desc())
+        # Get all organismos
+        organismos = models_old.Jerarquia.select(
+            models_old.Jerarquia.id,
+            models_old.Jerarquia.codigo_organismo.alias('codigo'),
+            models_old.Jerarquia.nombre_ministerio.alias('categoria'),
+            models_old.Jerarquia.nombre_organismo.alias('nombre'),
+        ).distinct().order_by(models_old.Jerarquia.nombre_organismo)
 
         # Get page
         q_page = req.params.get('pagina', '1')

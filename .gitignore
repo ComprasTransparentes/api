@@ -4,3 +4,4 @@ _*/
 *.pyc
 .env
 peewee.db
+_*/
