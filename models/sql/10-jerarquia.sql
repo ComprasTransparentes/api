@@ -6,7 +6,7 @@
 
 UPDATE tenders
 SET moneda = 'CLP'
-WHERE code = 453508;
+WHERE id = 453508;
 
 -- CURRENCY
 
