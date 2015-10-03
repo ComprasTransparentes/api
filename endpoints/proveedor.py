@@ -70,7 +70,7 @@ class ProveedorItem(object):
             models_stats.LicitacionMaster.fecha_creacion.desc()
         )
 
-        p_licitaciones = req.params.get('p_items', '1')
+        p_licitaciones = req.params.get('p_licitaciones', '1')
         p_licitaciones = max(int(p_licitaciones) if p_licitaciones.isdigit() else 1, 1)
 
         response['extra'] = {
@@ -87,6 +87,56 @@ class ProveedorItem(object):
             response = "%s(%s)" % (callback, response)
 
         resp.body = response
+
+
+class ProveedorLicitacion(object):
+
+    @database.atomic()
+    def on_get(self, req, resp, proveedor_id=None):
+
+        licitacion_monto_adjudicado = models_stats.MasterPlop.select(
+            models_stats.MasterPlop.licitacion.alias('id'),
+            fn.sum(models_stats.MasterPlop.monto).alias('monto_adjudicado')
+        ).group_by(
+            SQL('id')
+        ).where(
+            models_stats.MasterPlop.company == proveedor_id
+        ).alias('monto_adjudicado')
+
+        licitacion_monto_total = models_stats.MasterPlop.select(
+            models_stats.MasterPlop.licitacion.alias('id'),
+            fn.sum(models_stats.MasterPlop.monto).alias('monto_total')
+        ).group_by(
+            SQL('id')
+        ).alias('monto_total')
+
+        licitaciones = models_stats.LicitacionMaster.select(
+            models_stats.LicitacionMaster.licitacion.alias('id'),
+            models_stats.LicitacionMaster.nombre,
+            models_stats.LicitacionMaster.licitacion_codigo.alias('codigo'),
+            licitacion_monto_adjudicado.c.monto_adjudicado,
+            licitacion_monto_total.c.monto_total
+        ).join(
+            licitacion_monto_adjudicado,
+            on=(models_stats.LicitacionMaster.licitacion == licitacion_monto_adjudicado.c.id)
+        ).join(
+            licitacion_monto_total,
+            on=(models_stats.LicitacionMaster.licitacion == licitacion_monto_total.c.id)
+        )
+
+        licitaciones = licitaciones.order_by(
+            models_stats.LicitacionMaster.fecha_creacion.desc()
+        )
+
+        p_licitaciones = req.params.get('pagina', '1')
+        p_licitaciones = max(int(p_licitaciones) if p_licitaciones.isdigit() else 1, 1)
+
+        response = {
+            'licitaciones': [licitacion for licitacion in licitaciones.paginate(p_licitaciones, 10).dicts()],
+            'n_licitaciones': licitaciones.count(),
+        }
+
+        resp.body = json.dumps(response, cls=JSONEncoderPlus, sort_keys=True)
 
 
 class ProveedorList(object):

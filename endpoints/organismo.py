@@ -115,7 +115,7 @@ class OrganismoItem(object):
             SQL('estado') == 8
         )
 
-        p_licitaciones = req.params.get('p_items', '1')
+        p_licitaciones = req.params.get('p_licitaciones', '1')
         p_licitaciones = max(int(p_licitaciones) if p_licitaciones.isdigit() else 1, 1)
 
         response['extra'] = {
@@ -141,6 +141,53 @@ class OrganismoItem(object):
             response = "%s(%s)" % (callback, response)
 
         resp.body = response
+
+
+class OrganismoLicitacion(object):
+
+    @database.atomic()
+    def on_get(self, req, resp, organismo_id=None):
+
+        estados_recientes = LicitacionEstado.select(
+            LicitacionEstado.licitacion,
+            fn.max(LicitacionEstado.fecha)
+        ).group_by(
+            LicitacionEstado.licitacion
+        ).alias('estados_recientes')
+
+        licitacion_estados = LicitacionEstado.select(
+            LicitacionEstado.licitacion,
+            LicitacionEstado.estado,
+            LicitacionEstado.fecha
+        ).join(
+            estados_recientes,
+            on=(LicitacionEstado.licitacion == estados_recientes.c.licitacion_id)
+        ).alias('licitacion_estados')
+
+        licitaciones = models_stats.LicitacionMaster.select(
+            models_stats.LicitacionMaster.licitacion.alias('id'),
+            models_stats.LicitacionMaster.licitacion_codigo.alias('codigo'),
+            models_stats.LicitacionMaster.nombre.alias('nombre'),
+            models_stats.LicitacionMaster.fecha_creacion,
+            licitacion_estados.c.estado.alias('estado')
+        ).join(
+            licitacion_estados,
+            on=(models_stats.LicitacionMaster.licitacion == licitacion_estados.c.licitacion_id)
+        ).where(
+            models_stats.LicitacionMaster.idorganismo == organismo_id
+        ).order_by(
+            models_stats.LicitacionMaster.fecha_creacion.desc()
+        )
+
+        p_licitaciones = req.params.get('pagina', '1')
+        p_licitaciones = max(int(p_licitaciones) if p_licitaciones.isdigit() else 1, 1)
+
+        response = {
+            'licitaciones' : [licitacion for licitacion in licitaciones.paginate(p_licitaciones, 10).dicts()],
+            'n_licitaciones': licitaciones.count()
+        }
+
+        resp.body = json.dumps(response, cls=JSONEncoderPlus, sort_keys=True)
 
 
 class OrganismoList(object):
