@@ -23,44 +23,58 @@ class OrganismoItem(object):
         try:
 
             organismo = models_old.Jerarquia.select(
-                models_old.Jerarquia.id,
-                models_old.Jerarquia.nombre_ministerio.alias('categoria'),
-                models_old.Jerarquia.codigo_organismo.alias('codigo_comprador'),
-                models_old.Jerarquia.nombre_organismo.alias('nombre_comprador'),
-            ).where(models_old.Jerarquia.id == organismo_id).first()
+                models_old.Jerarquia.catalogo_organismo,
+                models_old.Jerarquia.ministerio_nombre.alias('categoria'),
+                models_old.Jerarquia.organismo_codigo.alias('codigo_comprador'),
+                models_old.Jerarquia.organismo_nombre.alias('nombre_comprador'),
+            ).where(models_old.Jerarquia.catalogo_organismo == organismo_id).first()
 
         except Comprador.DoesNotExist:
             raise falcon.HTTPNotFound()
 
         response = {
-            'id': organismo.id,
+            'id': organismo.catalogo_organismo,
             'categoria': organismo.categoria,
             'codigo_comprador': organismo.codigo_comprador,
             'nombre_comprador': organismo.nombre_comprador
         }
 
-        # Top licitaciones adjudicadas
-        top_licitaciones_global = models_stats.MasterPlop.select(
+        # Estados
+        estados_recientes = LicitacionEstado.select(
+            LicitacionEstado.licitacion,
+            fn.max(LicitacionEstado.fecha).alias('fecha')
+        ).group_by(
+            LicitacionEstado.licitacion
+        ).alias('estados_recientes')
+
+        licitacion_estados = LicitacionEstado.select(
+            LicitacionEstado.licitacion,
+            LicitacionEstado.estado,
+            estados_recientes.c.fecha
+        ).join(
+            estados_recientes,
+            on=((LicitacionEstado.licitacion == estados_recientes.c.licitacion_id) & (LicitacionEstado.fecha == estados_recientes.c.fecha))
+        ).alias('licitacion_estados')
+
+        top_licitaciones_organismo_global = models_stats.MasterPlop.select(
             models_stats.MasterPlop.licitacion.alias('id'),
-            fn.sum(models_stats.MasterPlop.monto).alias('monto'),
+            fn.sum(models_stats.MasterPlop.monto).alias('monto_global'),
         ).group_by(
             models_stats.MasterPlop.licitacion
-        ).order_by(
-            SQL('monto').desc()
-        ).alias('top_licitaciones_global')
-
-        top_licitaciones = models_stats.LicitacionMaster.select(
-            top_licitaciones_global.c.id,
-            models_stats.LicitacionMaster.licitacion_codigo.alias('codigo'),
-            models_stats.LicitacionMaster.nombre,
-            top_licitaciones_global.c.monto
-        ).join(
-            top_licitaciones_global,
-            on=(models_stats.LicitacionMaster.licitacion == top_licitaciones_global.c.id)
         ).where(
-            models_stats.LicitacionMaster.idorganismo == organismo_id
-        ).order_by(
-            SQL('monto').desc()
+            models_stats.MasterPlop.organismo == organismo_id
+        ).alias('licitaciones_organismo_')
+
+        top_licitaciones_organismo = models_stats.MasterPlop.select(
+            models_stats.MasterPlop.licitacion.alias('id'),
+            models_stats.MasterPlop.licitacion_codigo.alias('codigo'),
+            models_stats.MasterPlop.licitacion_nombre.alias('nombre'),
+            models_stats.MasterPlop.licitacion_descripcion.alias('descripcion'),
+            models_stats.MasterPlop.fecha_creacion.alias('fecha_creacion'),
+            top_licitaciones_organismo_global.c.monto_global.alias('monto')
+        ).join(
+            top_licitaciones_organismo_global,
+            on=(models_stats.MasterPlop.licitacion == top_licitaciones_organismo_global.c.id)
         )
 
         # Top proveedores
@@ -106,25 +120,21 @@ class OrganismoItem(object):
             licitacion_estados,
             on=(models_stats.LicitacionMaster.licitacion == licitacion_estados.c.licitacion_id)
         ).where(
-            models_stats.LicitacionMaster.idorganismo == organismo_id
+            models_stats.LicitacionMaster.catalogo_organismo == organismo_id
         ).order_by(
             models_stats.LicitacionMaster.fecha_creacion.desc()
-        )
-
-        licitaciones_adjudicadas = licitaciones.where(
-            SQL('estado') == 8
         )
 
         p_licitaciones = req.params.get('p_licitaciones', '1')
         p_licitaciones = max(int(p_licitaciones) if p_licitaciones.isdigit() else 1, 1)
 
         response['extra'] = {
-            'top_licitaciones': [licitacion for licitacion in top_licitaciones.paginate(1, 10).dicts()],
-            'top_proveedores': [proveedor for proveedor in top_proveedores.dicts()],
-            'licitaciones': [licitacion for licitacion in licitaciones.paginate(p_licitaciones, 10).dicts()],
-            'n_licitaciones': licitaciones.count(),
-            'n_licitaciones_adjudicadas': licitaciones_adjudicadas.count(),
-            'monto_adjudicado': int(top_licitaciones.select(fn.sum(SQL('monto')).alias('monto')).first().monto),
+            'top_licitaciones':             [licitacion for licitacion in top_licitaciones_organismo.order_by(SQL('monto').desc()).limit(10).dicts()],
+            'top_proveedores':              [proveedor for proveedor in top_proveedores.dicts()],
+            'licitaciones':                 [licitacion for licitacion in licitaciones.order_by(SQL('fecha_creacion').desc()).paginate(p_licitaciones, 10).dicts()],
+            'n_licitaciones':               licitaciones.count(),
+            'n_licitaciones_adjudicadas':   top_licitaciones_organismo.count(),
+            'monto_adjudicado':             int(top_licitaciones_organismo.select(fn.sum(SQL('monto')).alias('monto_adjudicado')).first().monto_adjudicado),
 
 
             # 'cantidad_licitaciones': licitacion_items_producto.count(),
@@ -174,7 +184,7 @@ class OrganismoLicitacion(object):
             licitacion_estados,
             on=(models_stats.LicitacionMaster.licitacion == licitacion_estados.c.licitacion_id)
         ).where(
-            models_stats.LicitacionMaster.idorganismo == organismo_id
+            models_stats.LicitacionMaster.organismo_id == organismo_id
         ).order_by(
             models_stats.LicitacionMaster.fecha_creacion.desc()
         )
@@ -201,9 +211,9 @@ class OrganismoList(object):
         # Get all organismos
         organismos = models_old.Jerarquia.select(
             models_old.Jerarquia.id,
-            models_old.Jerarquia.codigo_organismo.alias('codigo'),
-            models_old.Jerarquia.nombre_ministerio.alias('categoria'),
-            models_old.Jerarquia.nombre_organismo.alias('nombre'),
+            models_old.Jerarquia.organismo_codigo.alias('codigo'),
+            models_old.Jerarquia.ministerio_nombre.alias('categoria'),
+            models_old.Jerarquia.organismo_codigo.alias('nombre'),
         ).distinct()
 
         # Get page
@@ -212,12 +222,12 @@ class OrganismoList(object):
 
         q_q = req.params.get('q', None)
         if q_q:
-            organismos = organismos.where(ts_match(models_old.Jerarquia.nombre_organismo, q_q) | ts_match(models_old.Jerarquia.nombre_ministerio, q_q))
+            organismos = organismos.where(ts_match(models_old.Jerarquia.organismo_codigo, q_q) | ts_match(models_old.Jerarquia.ministerio_nombre, q_q))
 
 
         response = {
             'n_organismos': organismos.count(),
-            'organismos': [organismo for organismo in organismos.order_by(models_old.Jerarquia.nombre_organismo).paginate(q_page, OrganismoList.MAX_RESULTS).dicts()]
+            'organismos': [organismo for organismo in organismos.order_by(models_old.Jerarquia.organismo_codigo).paginate(q_page, OrganismoList.MAX_RESULTS).dicts()]
         }
 
         resp.body = json.dumps(response, cls=JSONEncoderPlus, sort_keys=True)

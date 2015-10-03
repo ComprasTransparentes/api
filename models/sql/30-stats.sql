@@ -50,11 +50,11 @@ CREATE TABLE stats.licitacion_master AS
         t5.codigo_usuario,
         t5.nombre_usuario,
         t5.cargo_usuario,
-        t6.idorganismo,
-        t6.sub_name      AS nombre_organismo,
-        t6.sub_name_plot AS nombre_organismo_plot,
-        t6.idministerio,
-        t6.name          AS nombre_ministerio
+        t6.catalogo_organismo_id AS catalogo_organismo_id,
+        t6.organismo_nombre      AS nombre_organismo,
+        t6.organismo_nombre_corto AS nombre_organismo_plot,
+        t6.ministerio_id,
+        t6.ministerio_nombre          AS nombre_ministerio
     FROM public.tenders AS t2
         LEFT JOIN public.adjudications AS t3
             ON (t2.id = t3.tender_id)
@@ -62,8 +62,8 @@ CREATE TABLE stats.licitacion_master AS
             ON (t2.id = t4.id)
         LEFT JOIN public_companies AS t5
             ON (t2.buyer_id = t5.id)
-        INNER JOIN jerarquia_final AS t6
-            ON (t5.code = t6.company_code)
+        INNER JOIN _jerarquia AS t6
+            ON (t5.code = t6.organismo_codigo)
     ORDER BY t2.id;
 
 -- CREO TABLA DE ITEM_LICITACION_ORGANISMO_EMPRESA
@@ -75,10 +75,13 @@ CREATE TABLE stats.master_plop AS
     SELECT DISTINCT
         B.id                                                                                  AS licitacion_item_id,
         R.licitacion_id,
+        R.nombre as licitacion_nombre,
+        R.descripcion as licitacion_descripcion,
         R.licitacion_codigo,
-        R.idOrganismo                                                                         AS organismo_id,
+        R.fecha_creacion,
+        R.catalogo_organismo_id                                                                        AS organismo_id,
         R.nombre_organismo_plot                                                               AS nombre_organismo,
-        R.idMinisterio                                                                        AS ministerio_id,
+        R.ministerio_id                                                                       AS ministerio_id,
         R.nombre_ministerio                                                                   AS nombre_ministerio,
         B.codigo_categoria :: INTEGER,
         XD.id                                                                                 AS categoria_id,
@@ -109,13 +112,53 @@ CREATE TABLE stats.master_plop AS
             ON B.tender_id = S.tenderId
         LEFT JOIN stats.licitacion_master R
             ON R.licitacion_id = B.tender_id
-        LEFT JOIN currency QQ
+        LEFT JOIN _currency QQ
             ON QQ.moneda = R.moneda
         LEFT JOIN companies CC
             ON A.company_id = CC.id
-        INNER JOIN categoria_producto XD
-            ON B.categoria = XD.categoria_total
+        INNER JOIN _categoria_producto XD
+            ON B.categoria = XD.categoria
     ORDER BY licitacion_id, licitacion_item_id;
+
+-- COMPARADOR
+
+DROP TABLE IF EXISTS stats.ministerio_producto_stats;
+
+CREATE TABLE stats.ministerio_producto_stats AS
+    SELECT
+        ministerio_id,
+        categoria_id,
+        categoria_tercer_nivel                                      AS categoria_nombre,
+        nombre_ministerio                                           AS ministerio_nombre,
+        monto_total,
+        (monto_total / cantidad_licitaciones_adjudicadas) :: BIGINT AS monto_promedio,
+        cantidad_proveedores                                        AS n_proveedores,
+        cantidad_licitaciones_adjudicadas                           AS n_licitaciones_adjudicadas
+    FROM (
+
+             SELECT
+                 categoria_id,
+                 categoria_tercer_nivel,
+                 ministerio_id,
+                 nombre_ministerio,
+                 sum(monto_total)                         AS monto_total,
+                 count(cantidad_licitaciones_adjudicadas) AS cantidad_licitaciones_adjudicadas,
+                 count(DISTINCT cantidad_proveedores)     AS cantidad_proveedores
+             FROM
+                 (
+                     SELECT
+                         categoria_id,
+                         categoria_tercer_nivel,
+                         ministerio_id,
+                         nombre_ministerio,
+                         monto :: BIGINT AS monto_total,
+                         licitacion_id   AS cantidad_licitaciones_adjudicadas,
+                         company_id      AS cantidad_proveedores
+                     FROM stats.master_plop
+                 ) AA
+             GROUP BY categoria_id, categoria_tercer_nivel, ministerio_id, nombre_ministerio
+         ) BB
+    ORDER BY categoria_id, categoria_nombre, ministerio_id, ministerio_nombre;
 
 -- CREO QUERIES PARA LAS VISUALIZACIONES DEL PRINCIPIO
 

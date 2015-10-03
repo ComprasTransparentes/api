@@ -66,20 +66,21 @@ class LicitacionMaster(BaseModel):
     fecha_visita_terreno = DateTimeField(null=True)
     fechas_usuario = DateTimeField(null=True)
     fono_responsable_contrato = CharField(null=True)
-    idministerio = IntegerField(null=True)
-    idorganismo = IntegerField(null=True)
+    ministerio_id = IntegerField(null=True)
+    organismo_id = IntegerField(null=True)
     licitacion_codigo = CharField(null=True)
     licitacion = IntegerField(db_column='licitacion_id', null=True)
     moneda = CharField(null=True)
     nombre = TextField(null=True)
-    nombre_ministerio = CharField(null=True)
-    nombre_organismo = CharField(null=True)
-    nombre_organismo_plot = CharField(null=True)
+    ministerio_nombre = CharField(null=True)
+    organismo_nombre = CharField(null=True)
+    organismo_nombre_corto = CharField(null=True)
     nombre_responsable_contrato = CharField(null=True)
     nombre_responsable_pago = CharField(null=True)
     nombre_unidad = CharField(null=True)
     nombre_usuario = CharField(null=True)
     organismo = IntegerField(db_column='organismo_id', null=True)
+    catalogo_organismo = IntegerField(db_column='catalogo_organismo_id')
     region_unidad = CharField(null=True)
     rut_usuario = CharField(null=True)
     tipo = CharField(null=True)
@@ -115,9 +116,12 @@ class MasterPlop(BaseModel):
     codigo_categoria = IntegerField(null=True)
     codigo_producto = IntegerField(null=True)
     company = IntegerField(db_column='company_id', null=True)
+    fecha_creacion = DateTimeField(null=True)
     licitacion_codigo = CharField(null=True)
     licitacion = IntegerField(db_column='licitacion_id', null=True)
     licitacion_item = IntegerField(db_column='licitacion_item_id', null=True)
+    licitacion_descripcion = CharField(null=True)
+    licitacion_nombre = CharField(null=True)
     mes = IntegerField(null=True)
     ministerio = IntegerField(db_column='ministerio_id', null=True)
     monto = FloatField(null=True)
@@ -168,3 +172,18 @@ class ProveedorRegionSemestreMonto(BaseModel):
 
     class Meta:
         db_table = 'proveedor_region_semestre_monto'
+
+
+class MinisterioProductoStats(BaseModel):
+    categoria = IntegerField(db_column='categoria_id')
+    categoria_nombre = CharField()
+    ministerio = IntegerField(db_column='ministerio_id')
+    ministerio_nombre = CharField()
+    monto_total = IntegerField()
+    monto_promedio = IntegerField()
+    n_proveedores = IntegerField()
+    n_licitaciones_adjudicadas = IntegerField()
+
+    class Meta:
+        db_table = 'ministerio_producto_stats'
+        primary_key = False

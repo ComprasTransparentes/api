@@ -3,6 +3,7 @@ import falcon
 from middlewares.cors import CorsMiddleware
 
 from endpoints.licitacion import LicitacionItem, LicitacionList
+from endpoints.ministerio import MinisterioStatsItem
 from endpoints.organismo import OrganismoItem, OrganismoList, OrganismoLicitacion
 from endpoints.proveedor import ProveedorItem, ProveedorList, ProveedorLicitacion
 from endpoints.stats import StatsItem, StatsTop
@@ -14,9 +15,10 @@ app = falcon.API(middleware=[CorsMiddleware()])
 app.add_route('/licitacion/', LicitacionList())
 app.add_route('/licitacion/{licitacion_id}', LicitacionItem())
 
+app.add_route('/ministerio/{ministerio_id}/categoria/{categoria_id}/stats', MinisterioStatsItem())
+
 app.add_route('/organismo/', OrganismoList())
 app.add_route('/organismo/{organismo_id}', OrganismoItem())
-
 app.add_route('/organismo/{organismo_id}/licitacion', OrganismoLicitacion())
 
 app.add_route('/proveedor/', ProveedorList())

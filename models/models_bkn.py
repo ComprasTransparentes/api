@@ -106,6 +106,7 @@ class Licitacion(BaseModel):
 
     adjudicacion = ForeignKeyField(Adjudicacion, null=True, on_delete='CASCADE', related_name='licitacion')
     comprador = ForeignKeyField(Comprador, on_delete='CASCADE',related_name='licitaciones')
+    jerarquia = IntegerField()
 
     class Meta:
         db_table = 'licitacion'

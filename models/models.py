@@ -67,33 +67,6 @@ class Companies(BaseModel):
         db_table = 'companies'
 
 
-class Currency(BaseModel):
-    moneda = CharField(null=True)
-    tipo_cambio = DecimalField(null=True)
-
-    class Meta:
-        db_table = 'currency'
-
-
-class Ministerio(BaseModel):
-    nombre = CharField(db_column='name')
-
-    class Meta:
-        db_table = 'ministerios'
-
-
-class Jerarquia(BaseModel):
-    id = PrimaryKeyField(db_column='idorganismo')
-    ministerio_id = ForeignKeyField(Ministerio, db_column='idministerio')
-    nombre_ministerio = CharField(db_column='name')
-    codigo_organismo = CharField(db_column='company_code', unique=True)
-    nombre_organismo = CharField(db_column='sub_name')
-    nombre_organismo_corto = CharField(db_column='sub_name_plot')
-
-    class Meta:
-        db_table = 'jerarquia_final'
-
-
 class OrderDates(BaseModel):
     created_at = DateTimeField()
     fecha_aceptacion = CharField(null=True)
@@ -346,3 +319,55 @@ class TransactionalOffers(BaseModel):
 
     class Meta:
         db_table = 'transactional_offers'
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+class Currency(BaseModel):
+    moneda = CharField(null=True)
+    tipo_cambio = DecimalField(null=True)
+
+    class Meta:
+        db_table = '_currency'
+
+
+class Ministerio(BaseModel):
+    nombre = CharField()
+
+    class Meta:
+        db_table = '_ministerio'
+
+
+class Organismo(BaseModel):
+    nombre = CharField()
+
+    class Meta:
+        db_table = '_organismo'
+
+
+class Jerarquia(BaseModel):
+    # ministerio = ForeignKeyField(Ministerio)
+    ministerio = IntegerField(db_column='catalogo_organismo_id')
+    ministerio_nombre = CharField()
+
+    # catalogo_organismo = ForeignKeyField(Organismo)
+    organismo_codigo = CharField()
+    catalogo_organismo = IntegerField(db_column='catalogo_organismo_id')
+    organismo_nombre = CharField()
+    organismo_nombre_corto = CharField()
+
+    class Meta:
+        db_table = '_jerarquia'
+
+
+class CategoriaProucto(BaseModel):
+    categoria = CharField()
+    categoria_1 = CharField()
+    categoria_2 = CharField()
+    categoria_3 = CharField()
+
+    class Meta:
+        db_table = '_categoria_producto'

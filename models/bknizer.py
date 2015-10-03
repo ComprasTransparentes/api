@@ -74,11 +74,11 @@ print "\nMIGRATE PublicCompanies -> %s.Comprador" % db_schema_bkn
 fields_from = [
     models_old.PublicCompanies.id,
 
-    models_old.Jerarquia.nombre_ministerio,
-    models_old.Jerarquia.id,
+    models_old.Jerarquia.ministerio_nombre,
+    models_old.Jerarquia.catalogo_organismo,
 
-    cast(models_old.Jerarquia.codigo_organismo, 'integer'),
-    models_old.Jerarquia.nombre_organismo,
+    cast(models_old.Jerarquia.organismo_codigo, 'integer'),
+    models_old.Jerarquia.organismo_nombre,
 
     cast(models_old.PublicCompanies.codigo_unidad, 'integer'),
     models_old.PublicCompanies.nombre_unidad,
@@ -93,7 +93,7 @@ fields_from = [
     models_old.PublicCompanies.cargo_usuario,
 ]
 
-query_from = models_old.PublicCompanies.select(*fields_from).join(models_old.Jerarquia, on=(models_old.PublicCompanies.code == models_old.Jerarquia.codigo_organismo))
+query_from = models_old.PublicCompanies.select(*fields_from).join(models_old.Jerarquia, on=(models_old.PublicCompanies.code == models_old.Jerarquia.organismo_codigo))
 
 fields_to = [
     models_bkn.Comprador.id,
@@ -262,6 +262,7 @@ fields_from = [
     models_old.Tenders.email_responsable_pago,
 
     models_old.Tenders.buyer,
+    models_old.Jerarquia.catalogo_organismo,
     models_old.Adjudications.id,
 
     cast(models_old.TenderDates.fecha_creacion, 'timestamp'),
@@ -288,6 +289,9 @@ query_from = models_old.Tenders.select(
     models_bkn.Comprador,
     on=(models_old.Tenders.buyer == models_bkn.Comprador.id)
 ).join(
+    models_old.Jerarquia,
+    on=(models_bkn.Comprador.codigo_comprador == cast(models_old.Jerarquia.organismo_codigo, 'integer'))
+).join(
     models_old.Adjudications,
     peewee.JOIN_LEFT_OUTER,
     on=(models_old.Tenders.id == models_old.Adjudications.tender)
@@ -313,6 +317,7 @@ fields_to = [
     models_bkn.Licitacion.email_responsable_pago,
 
     models_bkn.Licitacion.comprador,
+    models_bkn.Licitacion.jerarquia,
     models_bkn.Licitacion.adjudicacion,
 
     models_bkn.Licitacion.fecha_creacion,
