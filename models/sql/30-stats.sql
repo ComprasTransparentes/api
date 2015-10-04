@@ -110,7 +110,7 @@ CREATE TABLE stats.master_plop AS
                        WHERE state = '8'
                    ) S
             ON B.tender_id = S.tenderId
-        LEFT JOIN stats.licitacion_master R
+        inner JOIN stats.licitacion_master R
             ON R.licitacion_id = B.tender_id
         LEFT JOIN _currency QQ
             ON QQ.moneda = R.moneda
