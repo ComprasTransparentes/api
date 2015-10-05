@@ -151,7 +151,7 @@ class OrganismoItem(object):
 class OrganismoLicitacion(object):
 
     @database.atomic()
-    def on_get(self, req, resp, organismo_id=None):
+    def on_get(self, req, resp, organismo_id):
 
         estados_recientes = LicitacionEstado.select(
             LicitacionEstado.licitacion,
@@ -179,7 +179,7 @@ class OrganismoLicitacion(object):
             licitacion_estados,
             on=(models_stats.LicitacionMaster.licitacion == licitacion_estados.c.licitacion_id)
         ).where(
-            models_stats.LicitacionMaster.organismo_id == organismo_id
+            models_stats.LicitacionMaster.catalogo_organismo == organismo_id
         ).order_by(
             models_stats.LicitacionMaster.fecha_creacion.desc()
         )
