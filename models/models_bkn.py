@@ -105,7 +105,7 @@ class Licitacion(BaseModel):
     fecha_entrega_antecedentes = DateTimeField(null=True)
 
     adjudicacion = ForeignKeyField(Adjudicacion, null=True, on_delete='CASCADE', related_name='licitacion')
-    comprador = ForeignKeyField(Comprador, on_delete='CASCADE',related_name='licitaciones')
+    comprador = ForeignKeyField(Comprador, on_delete='CASCADE', related_name='licitaciones')
     jerarquia = IntegerField()
 
     class Meta:

@@ -22,21 +22,16 @@ class OrganismoItem(object):
         # Get the organismo
         try:
 
-            organismo = models_old.Jerarquia.select(
-                models_old.Jerarquia.catalogo_organismo,
-                models_old.Jerarquia.ministerio_nombre.alias('categoria'),
-                models_old.Jerarquia.organismo_codigo.alias('codigo_comprador'),
-                models_old.Jerarquia.organismo_nombre.alias('nombre_comprador'),
-            ).where(models_old.Jerarquia.catalogo_organismo == organismo_id).first()
+            organismo = models_old.Jerarquia.get(models_old.Jerarquia.catalogo_organismo == organismo_id)
 
-        except Comprador.DoesNotExist:
+        except models_old.Jerarquia.DoesNotExist:
             raise falcon.HTTPNotFound()
 
         response = {
             'id': organismo.catalogo_organismo,
-            'categoria': organismo.categoria,
-            'codigo_comprador': organismo.codigo_comprador,
-            'nombre_comprador': organismo.nombre_comprador
+            'categoria': organismo.ministerio_nombre,
+            'codigo_comprador': organismo.organismo_codigo,
+            'nombre_comprador': organismo.organismo_nombre
         }
 
         # Estados
