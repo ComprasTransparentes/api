@@ -117,6 +117,8 @@ class MasterPlop(BaseModel):
     codigo_producto = IntegerField(null=True)
     company = IntegerField(db_column='company_id', null=True)
     fecha_creacion = DateTimeField(null=True)
+    fecha_publicacion = DateTimeField(null=True)
+    fecha_adjudicacion = DateField(null=True)
     licitacion_codigo = CharField(null=True)
     licitacion = IntegerField(db_column='licitacion_id', null=True)
     licitacion_item = IntegerField(db_column='licitacion_item_id', null=True)

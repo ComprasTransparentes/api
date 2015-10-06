@@ -140,6 +140,38 @@ class LicitacionList(object):
             if fecha_creacion_max:
                 filters.append(models_stats.MasterPlop.fecha_creacion <= fecha_creacion_max)
 
+        q_fecha_publicacion = req.params.get('fecha_publicacion', None)
+        if q_fecha_publicacion:
+            q_fecha_publicacion = q_fecha_publicacion.split('|')
+            try:
+                fecha_publicacion_min = dateutil.parser.parse(q_fecha_publicacion[0]) if q_fecha_publicacion[0] else None
+                fecha_publicacion_max = dateutil.parser.parse(q_fecha_publicacion[1]) if q_fecha_publicacion[1] else None
+            except IndexError:
+                raise falcon.HTTPBadRequest("Wrong creation date", "dates must be separated by a pipe [|]")
+            except ValueError:
+                raise falcon.HTTPBadRequest("Wrong creation date", "must be a datetime in ISO8601 format")
+
+            if fecha_publicacion_min:
+                filters.append(models_stats.MasterPlop.fecha_publicacion >= fecha_publicacion_min)
+            if fecha_publicacion_max:
+                filters.append(models_stats.MasterPlop.fecha_publicacion <= fecha_publicacion_max)
+
+        q_fecha_adjudicacion = req.params.get('fecha_adjudicacion', None)
+        if q_fecha_adjudicacion:
+            q_fecha_adjudicacion = q_fecha_adjudicacion.split('|')
+            try:
+                fecha_adjudicacion_min = dateutil.parser.parse(q_fecha_adjudicacion[0]) if q_fecha_adjudicacion[0] else None
+                fecha_adjudicacion_max = dateutil.parser.parse(q_fecha_adjudicacion[1]) if q_fecha_adjudicacion[1] else None
+            except IndexError:
+                raise falcon.HTTPBadRequest("Wrong creation date", "dates must be separated by a pipe [|]")
+            except ValueError:
+                raise falcon.HTTPBadRequest("Wrong creation date", "must be a datetime in ISO8601 format")
+
+            if fecha_adjudicacion_min:
+                filters.append(models_stats.MasterPlop.fecha_adjudicacion >= fecha_adjudicacion_min)
+            if fecha_adjudicacion_max:
+                filters.append(models_stats.MasterPlop.fecha_adjudicacion <= fecha_adjudicacion_max)
+
         q_monto = req.params.get('monto', None)
         if q_monto:
             q_monto = q_monto.split('|')

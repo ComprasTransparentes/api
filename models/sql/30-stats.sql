@@ -79,6 +79,8 @@ CREATE TABLE stats.master_plop AS
         R.descripcion as licitacion_descripcion,
         R.licitacion_codigo,
         R.fecha_creacion,
+        R.fecha_publicacion,
+        R.fecha_adjudicacion,
         R.catalogo_organismo_id                                                               AS organismo_id,
         R.nombre_organismo,
         R.nombre_organismo_plot                                                               AS nombre_organismo_corto,
