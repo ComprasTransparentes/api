@@ -5,6 +5,7 @@ import falcon
 from playhouse.shortcuts import model_to_dict
 
 from models.models_bkn import *
+from models import models_stats
 from utils.myjson import JSONEncoderPlus
 from utils.mypeewee import ts_match, ts_rank
 
@@ -46,34 +47,54 @@ class LicitacionItem(object):
 
 class LicitacionList(object):
 
-    ALLOWED_PARAMS = ['q']
     MAX_RESULTS = 10
 
     @database.atomic()
     def on_get(self, req, resp):
 
         # Get all licitaciones
-        licitaciones = Licitacion.select(
-            Licitacion.id,
-            Licitacion.codigo,
-            Licitacion.nombre,
-            Licitacion.descripcion,
-            Licitacion.fecha_creacion,
-            Comprador.id.alias('organismo_id'),
-            Comprador.nombre_comprador.alias('organismo_nombre'),
-            Comprador.rut_unidad.alias('organismo_rut')
-        ).join(
-            Comprador
-        ).order_by(Licitacion.fecha_creacion.desc())
+        licitaciones = models_stats.MasterPlop.select(
+            models_stats.MasterPlop.licitacion.alias('id'),
+            models_stats.MasterPlop.licitacion_codigo.alias('codigo'),
+            models_stats.MasterPlop.licitacion_nombre.alias('nombre'),
+            models_stats.MasterPlop.licitacion_descripcion.alias('descripcion'),
+            models_stats.MasterPlop.fecha_creacion.alias('fecha_creacion'),
+            models_stats.MasterPlop.organismo.alias('organismo_id'),
+            models_stats.MasterPlop.nombre_organismo.alias('organismo_nombre'),
+            fn.sum(models_stats.MasterPlop.monto).alias('monto')
+        )
 
         # Get page
         q_page = req.params.get('pagina', '1')
         q_page = max(int(q_page) if q_page.isdigit() else 1, 1)
 
+        filters = []
+
         q_q = req.params.get('q', None)
         if q_q:
             # TODO Try to make just one query over one index instead of two or more ORed queries
-            licitaciones = licitaciones.where(ts_match(Licitacion.nombre, q_q) | ts_match(Licitacion.descripcion, q_q))
+
+            filters.append(ts_match(models_stats.MasterPlop.licitacion_nombre, q_q) | ts_match(models_stats.MasterPlop.licitacion_descripcion, q_q))
+
+        q_producto = req.params.get('producto', None)
+        if q_producto:
+            if not q_producto.isdigit():
+                raise falcon.HTTPBadRequest("Bad product code", "product code must be an integer")
+            q_producto = int(q_producto)
+            filters.append(models_stats.MasterPlop.categoria == q_producto)
+
+        if filters:
+            licitaciones = licitaciones.where(*filters)
+
+        licitaciones = licitaciones.group_by(
+            models_stats.MasterPlop.licitacion,
+            models_stats.MasterPlop.licitacion_codigo,
+            models_stats.MasterPlop.licitacion_nombre,
+            models_stats.MasterPlop.licitacion_descripcion,
+            models_stats.MasterPlop.fecha_creacion,
+            models_stats.MasterPlop.organismo,
+            models_stats.MasterPlop.nombre_organismo,
+        )
 
         response = {
             'n_licitaciones': licitaciones.count(),
@@ -87,8 +108,9 @@ class LicitacionList(object):
                     'organismo': {
                         'id': licitacion['organismo_id'],
                         'nombre': licitacion['organismo_nombre'],
-                        'rut': licitacion['organismo_rut']
-                    }
+                        'rut': "0.000.000-0"
+                    },
+                    'monto_adjudicado': licitacion['monto']
                 }
                 for licitacion in licitaciones.paginate(q_page, LicitacionList.MAX_RESULTS).dicts()
             ]

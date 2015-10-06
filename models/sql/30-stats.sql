@@ -79,8 +79,9 @@ CREATE TABLE stats.master_plop AS
         R.descripcion as licitacion_descripcion,
         R.licitacion_codigo,
         R.fecha_creacion,
-        R.catalogo_organismo_id                                                                        AS organismo_id,
-        R.nombre_organismo_plot                                                               AS nombre_organismo,
+        R.catalogo_organismo_id                                                               AS organismo_id,
+        R.nombre_organismo,
+        R.nombre_organismo_plot                                                               AS nombre_organismo_corto,
         R.ministerio_id                                                                       AS ministerio_id,
         R.nombre_ministerio                                                                   AS nombre_ministerio,
         B.codigo_categoria :: INTEGER,
@@ -88,7 +89,7 @@ CREATE TABLE stats.master_plop AS
         XD.categoria_1                                                                        AS categoria_primer_nivel,
         XD.categoria_2                                                                        AS categoria_segundo_nivel,
         XD.categoria_3                                                                        AS categoria_tercer_nivel,
-        B.codigo_producto,
+        B.codigo_producto :: INTEGER,
         B.nombre_producto,
         A.company_id,
         CC.nombre,
@@ -119,6 +120,9 @@ CREATE TABLE stats.master_plop AS
         INNER JOIN _categoria_producto XD
             ON B.categoria = XD.categoria
     ORDER BY licitacion_id, licitacion_item_id;
+
+CREATE INDEX master_plop_licitacion_nombre_index ON stats.master_plop USING GIN (to_tsvector('spanish', licitacion_nombre));
+CREATE INDEX master_plop_licitacion_descripcion_index ON stats.master_plop USING GIN (to_tsvector('spanish', licitacion_descripcion));
 
 -- COMPARADOR
 
@@ -168,10 +172,10 @@ CREATE TABLE stats.ministerio_organismo_monto AS
 
     SELECT
         nombre_ministerio,
-        nombre_organismo,
+        nombre_organismo_corto AS nombre_organismo,
         sum(monto) AS monto
     FROM stats.master_plop
-    GROUP BY nombre_ministerio, nombre_organismo
+    GROUP BY nombre_ministerio, nombre_organismo_corto
     ORDER BY monto DESC;
 
 -- query 1 desagregada
@@ -181,7 +185,7 @@ CREATE TABLE stats.ministerio_organismo_monto AS
 CREATE TABLE stats.ministerio_organismo_region_semestre_monto AS
     SELECT
         nombre_ministerio,
-        nombre_organismo,
+        nombre_organismo_corto AS nombre_organismo,
         sum(monto)    AS monto,
         CASE WHEN mes <= '6' AND ano = '2013'
             THEN 'S1'
@@ -196,7 +200,7 @@ CREATE TABLE stats.ministerio_organismo_region_semestre_monto AS
         ELSE 'S6' END AS Semestre,
         region
     FROM stats.master_plop
-    GROUP BY nombre_ministerio, nombre_organismo, semestre, region;
+    GROUP BY nombre_ministerio, nombre_organismo_corto, semestre, region;
 
 -- query 2
 

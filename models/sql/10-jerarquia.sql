@@ -1780,8 +1780,7 @@ CREATE TABLE _categoria_producto (
 );
 
 INSERT INTO _categoria_producto (id, categoria, categoria_1, categoria_2, categoria_3) VALUES
-    (1, 'Artículos de fabricación y producción / Rodamientos, cojinetes y ruedas dentadas industriales / Rodamientos',
-     'Artículos de fabricación y producción', 'Rodamientos, cojinetes y ruedas dentadas industriales', 'Rodamientos'),
+    (1, 'Artículos de fabricación y producción / Rodamientos, cojinetes y ruedas dentadas industriales / Rodamientos', 'Artículos de fabricación y producción', 'Rodamientos, cojinetes y ruedas dentadas industriales', 'Rodamientos'),
     (2, 'Artículos eléctricos y de iluminación / Artefactos y accesorios de iluminación / Iluminación de interiores', 'Artículos eléctricos y de iluminación', 'Artefactos y accesorios de iluminación', 'Iluminación de interiores'),
     (3, 'Artículos para estructuras, obras y construcciones / Puertas, ventanas y vidrios / Puertas', 'Artículos para estructuras, obras y construcciones', 'Puertas, ventanas y vidrios', 'Puertas'),
     (4, 'Equipamiento para laboratorios / Equipos e insumos para laboratorio / Hornos de laboratorio y accesorios', 'Equipamiento para laboratorios', 'Equipos e insumos para laboratorio', 'Hornos de laboratorio y accesorios'),

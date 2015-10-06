@@ -128,6 +128,7 @@ class MasterPlop(BaseModel):
     nombre = CharField(null=True)
     nombre_ministerio = CharField(null=True)
     nombre_organismo = CharField(null=True)
+    nombre_organismo_corto = CharField()
     nombre_producto = CharField(null=True)
     organismo = IntegerField(db_column='organismo_id', null=True)
     region = CharField(null=True)
