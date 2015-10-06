@@ -1,6 +1,7 @@
 import json
 
 import falcon
+import dateutil.parser
 
 from playhouse.shortcuts import model_to_dict
 
@@ -62,11 +63,15 @@ class LicitacionList(object):
             models_stats.MasterPlop.organismo.alias('organismo_id'),
             models_stats.MasterPlop.nombre_organismo.alias('organismo_nombre'),
             fn.sum(models_stats.MasterPlop.monto).alias('monto')
+        ).group_by(
+            models_stats.MasterPlop.licitacion,
+            models_stats.MasterPlop.licitacion_codigo,
+            models_stats.MasterPlop.licitacion_nombre,
+            models_stats.MasterPlop.licitacion_descripcion,
+            models_stats.MasterPlop.fecha_creacion,
+            models_stats.MasterPlop.organismo,
+            models_stats.MasterPlop.nombre_organismo
         )
-
-        # Get page
-        q_page = req.params.get('pagina', '1')
-        q_page = max(int(q_page) if q_page.isdigit() else 1, 1)
 
         filters = []
 
@@ -79,22 +84,84 @@ class LicitacionList(object):
         q_producto = req.params.get('producto', None)
         if q_producto:
             if not q_producto.isdigit():
-                raise falcon.HTTPBadRequest("Bad product code", "product code must be an integer")
+                raise falcon.HTTPBadRequest("Wrong product code", "product code must be an integer")
             q_producto = int(q_producto)
-            filters.append(models_stats.MasterPlop.categoria == q_producto)
+
+            # licitacion_id with items of type q_product
+            licitaciones_producto = models_stats.MasterPlop.select(
+                models_stats.MasterPlop.licitacion
+            ).where(
+                models_stats.MasterPlop.categoria == q_producto
+            ).distinct()
+
+            # Add filter
+            filters.append(models_stats.MasterPlop.licitacion << licitaciones_producto)
+
+        q_estado = req.params.get('estado', None)
+        if q_estado:
+            if not q_estado.isdigit():
+                raise falcon.HTTPBadRequest("Wrong product code", "state must be an integer")
+            q_estado = int(q_estado)
+
+            estados_recientes = LicitacionEstado.select(
+                LicitacionEstado.licitacion,
+                LicitacionEstado.estado,
+                fn.max(LicitacionEstado.fecha)
+            ).group_by(
+                LicitacionEstado.licitacion,
+                LicitacionEstado.estado
+            ).alias('estados_recientes')
+
+            licitacion_estados = LicitacionEstado.select(
+                LicitacionEstado.licitacion,
+            ).join(
+                estados_recientes,
+                on=(LicitacionEstado.licitacion == estados_recientes.c.licitacion_id)
+            ).where(
+                estados_recientes.c.estado == q_estado
+            ).distinct()
+
+            # Add filter
+            filters.append(models_stats.MasterPlop.licitacion << licitacion_estados)
+
+        q_fecha_creacion = req.params.get('fecha_creacion', None)
+        if q_fecha_creacion:
+            q_fecha_creacion = q_fecha_creacion.split('|')
+            try:
+                fecha_creacion_min = dateutil.parser.parse(q_fecha_creacion[0]) if q_fecha_creacion[0] else None
+                fecha_creacion_max = dateutil.parser.parse(q_fecha_creacion[1]) if q_fecha_creacion[1] else None
+            except IndexError:
+                raise falcon.HTTPBadRequest("Wrong creation date", "dates must be separated by a pipe [|]")
+            except ValueError:
+                raise falcon.HTTPBadRequest("Wrong creation date", "must be a datetime in ISO8601 format")
+
+            if fecha_creacion_min:
+                filters.append(models_stats.MasterPlop.fecha_creacion >= fecha_creacion_min)
+            if fecha_creacion_max:
+                filters.append(models_stats.MasterPlop.fecha_creacion <= fecha_creacion_max)
+
+        q_monto = req.params.get('monto', None)
+        if q_monto:
+            q_monto = q_monto.split('|')
+            try:
+                monto_min = int(q_monto[0]) if q_monto[0] else None
+                monto_max = int(q_monto[1]) if q_monto[1] else None
+            except IndexError:
+                raise falcon.HTTPBadRequest("Wrong amount", "amounts must be separated by a pipe [|]")
+            except ValueError:
+                raise falcon.HTTPBadRequest("Wrong amount", "amounts must be integers")
+
+            if monto_min:
+                filters.append(SQL('monto') >= monto_min)
+            if monto_max:
+                filters.append(SQL('monto') <= monto_max)
 
         if filters:
             licitaciones = licitaciones.where(*filters)
 
-        licitaciones = licitaciones.group_by(
-            models_stats.MasterPlop.licitacion,
-            models_stats.MasterPlop.licitacion_codigo,
-            models_stats.MasterPlop.licitacion_nombre,
-            models_stats.MasterPlop.licitacion_descripcion,
-            models_stats.MasterPlop.fecha_creacion,
-            models_stats.MasterPlop.organismo,
-            models_stats.MasterPlop.nombre_organismo,
-        )
+        # Get page
+        q_page = req.params.get('pagina', '1')
+        q_page = max(int(q_page) if q_page.isdigit() else 1, 1)
 
         response = {
             'n_licitaciones': licitaciones.count(),
@@ -108,7 +175,6 @@ class LicitacionList(object):
                     'organismo': {
                         'id': licitacion['organismo_id'],
                         'nombre': licitacion['organismo_nombre'],
-                        'rut': "0.000.000-0"
                     },
                     'monto_adjudicado': licitacion['monto']
                 }
