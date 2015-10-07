@@ -208,7 +208,7 @@ class OrganismoList(object):
             models_old.Jerarquia.id,
             models_old.Jerarquia.organismo_codigo.alias('codigo'),
             models_old.Jerarquia.ministerio_nombre.alias('categoria'),
-            models_old.Jerarquia.organismo_codigo.alias('nombre'),
+            models_old.Jerarquia.organismo_nombre.alias('nombre'),
         ).distinct()
 
         # Get page
