@@ -115,13 +115,12 @@ class Licitacion(BaseModel):
 class LicitacionEstado(BaseModel):
     licitacion = ForeignKeyField(Licitacion, on_delete='CASCADE',related_name='estados')
 
-    estado = IntegerField()
+    estado = IntegerField(index=True)
 
-    fecha = DateField()
+    fecha = DateField(index=True)
 
     class Meta:
         db_table = 'licitacion_estado'
-
 
 
 class LicitacionItem(BaseModel):

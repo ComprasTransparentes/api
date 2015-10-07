@@ -66,6 +66,11 @@ CREATE TABLE stats.licitacion_master AS
             ON (t5.code = t6.organismo_codigo)
     ORDER BY t2.id;
 
+CREATE INDEX licitacion_master_licitacion_id_idx
+ON stats.licitacion_master
+USING BTREE
+(licitacion_id);
+
 -- CREO TABLA DE ITEM_LICITACION_ORGANISMO_EMPRESA
 -- Es la mejor, por lo tanto se llama master plop!
 
@@ -123,8 +128,29 @@ CREATE TABLE stats.master_plop AS
             ON B.categoria = XD.categoria
     ORDER BY licitacion_id, licitacion_item_id;
 
-CREATE INDEX master_plop_licitacion_nombre_index ON stats.master_plop USING GIN (to_tsvector('spanish', licitacion_nombre));
-CREATE INDEX master_plop_licitacion_descripcion_index ON stats.master_plop USING GIN (to_tsvector('spanish', licitacion_descripcion));
+CREATE INDEX master_plop_licitacion_nombre_idx
+ON stats.master_plop
+USING GIN (to_tsvector('spanish', licitacion_nombre));
+
+CREATE INDEX master_plop_licitacion_descripcion_idx
+ON stats.master_plop
+USING GIN (to_tsvector('spanish',licitacion_descripcion));
+
+CREATE INDEX master_plop_licitacion_id_idx
+ON stats.master_plop
+USING BTREE (licitacion_id);
+
+CREATE INDEX master_plop_organismo_id_idx
+ON stats.master_plop
+USING BTREE (organismo_id);
+
+CREATE INDEX master_plop_company_id_idx
+ON stats.master_plop
+USING BTREE (company_id);
+
+CREATE INDEX master_plop_monto_idx
+ON stats.master_plop
+USING BTREE (monto);
 
 -- COMPARADOR
 
