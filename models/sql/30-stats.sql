@@ -1464,3 +1464,32 @@ CREATE TABLE stats.categoria_region_semestre_monto AS
      WHERE semestre = 'S6' AND region = 'Región de Valparaíso '
      ORDER BY monto DESC
      LIMIT 5);
+
+-- SUMARIO
+
+CREATE TABLE stats.sumario
+(
+    monto_transado BIGINT NOT NULL,
+    n_licitaciones BIGINT NOT NULL,
+    n_organismos   BIGINT NOT NULL,
+    n_proveedores  BIGINT NOT NULL
+);
+
+INSERT INTO stats.sumario (monto_transado, n_licitaciones, n_organismos, n_proveedores)
+    SELECT
+        (SELECT SUM(A.monto)
+         FROM
+             (SELECT monto
+              FROM stats.master_plop) A) AS monto_transado,
+        (SELECT COUNT(B)
+         FROM
+             (SELECT DISTINCT id
+              FROM bkn.licitacion) B)    AS n_licitaciones,
+        (SELECT COUNT(C)
+         FROM
+             (SELECT DISTINCT id
+              FROM _catalogo_organismo) C)        AS n_organismo,
+        COUNT(*)
+    FROM
+        (SELECT DISTINCT id
+         FROM bkn.proveedor) n_proveedores;

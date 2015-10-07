@@ -190,3 +190,14 @@ class MinisterioProductoStats(BaseModel):
     class Meta:
         db_table = 'ministerio_producto_stats'
         primary_key = False
+
+
+class Sumario(BaseModel):
+    monto_transado = IntegerField()
+    n_licitaciones = IntegerField()
+    n_organismos = IntegerField()
+    n_proveedores = IntegerField()
+
+    class Meta:
+        db_table = 'sumario'
+        primary_key = False

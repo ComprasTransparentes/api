@@ -19,12 +19,9 @@ class StatsItem(object):
 
         if datatype == '0':
 
-            response = {
-                'monto_transado': int(MasterPlop.select(fn.sum(MasterPlop.monto).alias('monto')).get().monto),
-                'n_licitaciones': LicitacionMaster.select().count(),
-                'n_organismos': models_old.Jerarquia.select().count(),
-                'n_proveedores': models_bkn.Proveedor.select().count()
-            }
+            stats = Sumario.select().first()
+
+            response = model_to_dict(stats)
 
             resp.body = json.dumps(response, cls=JSONEncoderPlus, sort_keys=True)
 
