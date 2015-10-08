@@ -16,6 +16,8 @@ class LicitacionItem(object):
     @database.atomic()
     def on_get(self, req, resp, licitacion_id=None):
 
+        print req.headers
+
         p_items = req.params.get('p_items', '1')
         p_items = max(int(p_items) if p_items.isdigit() else 1, 1)
 
@@ -54,23 +56,23 @@ class LicitacionList(object):
     def on_get(self, req, resp):
 
         # Get all licitaciones
-        licitaciones = models_stats.MasterPlop.select(
-            models_stats.MasterPlop.licitacion.alias('id'),
-            models_stats.MasterPlop.licitacion_codigo.alias('codigo'),
-            models_stats.MasterPlop.licitacion_nombre.alias('nombre'),
-            models_stats.MasterPlop.licitacion_descripcion.alias('descripcion'),
-            models_stats.MasterPlop.fecha_creacion.alias('fecha_creacion'),
-            models_stats.MasterPlop.organismo.alias('organismo_id'),
-            models_stats.MasterPlop.nombre_organismo.alias('organismo_nombre'),
-            fn.sum(models_stats.MasterPlop.monto).alias('monto')
+        licitaciones = models_stats.MasterPlopAll.select(
+            models_stats.MasterPlopAll.licitacion.alias('id'),
+            models_stats.MasterPlopAll.licitacion_codigo.alias('codigo'),
+            models_stats.MasterPlopAll.licitacion_nombre.alias('nombre'),
+            models_stats.MasterPlopAll.licitacion_descripcion.alias('descripcion'),
+            models_stats.MasterPlopAll.fecha_creacion.alias('fecha_creacion'),
+            models_stats.MasterPlopAll.organismo.alias('organismo_id'),
+            models_stats.MasterPlopAll.nombre_organismo.alias('organismo_nombre'),
+            fn.sum(models_stats.MasterPlopAll.monto).alias('monto')
         ).group_by(
-            models_stats.MasterPlop.licitacion,
-            models_stats.MasterPlop.licitacion_codigo,
-            models_stats.MasterPlop.licitacion_nombre,
-            models_stats.MasterPlop.licitacion_descripcion,
-            models_stats.MasterPlop.fecha_creacion,
-            models_stats.MasterPlop.organismo,
-            models_stats.MasterPlop.nombre_organismo
+            models_stats.MasterPlopAll.licitacion,
+            models_stats.MasterPlopAll.licitacion_codigo,
+            models_stats.MasterPlopAll.licitacion_nombre,
+            models_stats.MasterPlopAll.licitacion_descripcion,
+            models_stats.MasterPlopAll.fecha_creacion,
+            models_stats.MasterPlopAll.organismo,
+            models_stats.MasterPlopAll.nombre_organismo
         )
 
         filters = []
@@ -79,7 +81,7 @@ class LicitacionList(object):
         if q_q:
             # TODO Try to make just one query over one index instead of two or more ORed queries
 
-            filters.append(ts_match(models_stats.MasterPlop.licitacion_nombre, q_q) | ts_match(models_stats.MasterPlop.licitacion_descripcion, q_q))
+            filters.append(ts_match(models_stats.MasterPlopAll.licitacion_nombre, q_q) | ts_match(models_stats.MasterPlopAll.licitacion_descripcion, q_q))
 
         q_producto = req.params.get('producto', None)
         if q_producto:
@@ -88,14 +90,14 @@ class LicitacionList(object):
             q_producto = int(q_producto)
 
             # licitacion_id with items of type q_product
-            licitaciones_producto = models_stats.MasterPlop.select(
-                models_stats.MasterPlop.licitacion
+            licitaciones_producto = models_stats.MasterPlopAll.select(
+                models_stats.MasterPlopAll.licitacion
             ).where(
-                models_stats.MasterPlop.categoria == q_producto
+                models_stats.MasterPlopAll.categoria == q_producto
             ).distinct()
 
             # Add filter
-            filters.append(models_stats.MasterPlop.licitacion << licitaciones_producto)
+            filters.append(models_stats.MasterPlopAll.licitacion << licitaciones_producto)
 
         q_estado = req.params.get('estado', None)
         if q_estado:
@@ -103,26 +105,8 @@ class LicitacionList(object):
                 raise falcon.HTTPBadRequest("Wrong product code", "state must be an integer")
             q_estado = int(q_estado)
 
-            estados_recientes = LicitacionEstado.select(
-                LicitacionEstado.licitacion,
-                LicitacionEstado.estado,
-                fn.max(LicitacionEstado.fecha)
-            ).group_by(
-                LicitacionEstado.licitacion,
-                LicitacionEstado.estado
-            ).alias('estados_recientes')
-
-            licitacion_estados = LicitacionEstado.select(
-                LicitacionEstado.licitacion,
-            ).join(
-                estados_recientes,
-                on=(LicitacionEstado.licitacion == estados_recientes.c.licitacion_id)
-            ).where(
-                estados_recientes.c.estado == q_estado
-            ).distinct()
-
             # Add filter
-            filters.append(models_stats.MasterPlop.licitacion << licitacion_estados)
+            filters.append(models_stats.MasterPlopAll.estado == q_estado)
 
         q_fecha_creacion = req.params.get('fecha_creacion', None)
         if q_fecha_creacion:
@@ -136,9 +120,9 @@ class LicitacionList(object):
                 raise falcon.HTTPBadRequest("Wrong creation date", "must be a datetime in ISO8601 format")
 
             if fecha_creacion_min:
-                filters.append(models_stats.MasterPlop.fecha_creacion >= fecha_creacion_min)
+                filters.append(models_stats.MasterPlopAll.fecha_creacion >= fecha_creacion_min)
             if fecha_creacion_max:
-                filters.append(models_stats.MasterPlop.fecha_creacion <= fecha_creacion_max)
+                filters.append(models_stats.MasterPlopAll.fecha_creacion <= fecha_creacion_max)
 
         q_fecha_publicacion = req.params.get('fecha_publicacion', None)
         if q_fecha_publicacion:
@@ -152,9 +136,9 @@ class LicitacionList(object):
                 raise falcon.HTTPBadRequest("Wrong creation date", "must be a datetime in ISO8601 format")
 
             if fecha_publicacion_min:
-                filters.append(models_stats.MasterPlop.fecha_publicacion >= fecha_publicacion_min)
+                filters.append(models_stats.MasterPlopAll.fecha_publicacion >= fecha_publicacion_min)
             if fecha_publicacion_max:
-                filters.append(models_stats.MasterPlop.fecha_publicacion <= fecha_publicacion_max)
+                filters.append(models_stats.MasterPlopAll.fecha_publicacion <= fecha_publicacion_max)
 
         q_fecha_adjudicacion = req.params.get('fecha_adjudicacion', None)
         if q_fecha_adjudicacion:
@@ -168,9 +152,9 @@ class LicitacionList(object):
                 raise falcon.HTTPBadRequest("Wrong creation date", "must be a datetime in ISO8601 format")
 
             if fecha_adjudicacion_min:
-                filters.append(models_stats.MasterPlop.fecha_adjudicacion >= fecha_adjudicacion_min)
+                filters.append(models_stats.MasterPlopAll.fecha_adjudicacion >= fecha_adjudicacion_min)
             if fecha_adjudicacion_max:
-                filters.append(models_stats.MasterPlop.fecha_adjudicacion <= fecha_adjudicacion_max)
+                filters.append(models_stats.MasterPlopAll.fecha_adjudicacion <= fecha_adjudicacion_max)
 
         q_monto = req.params.get('monto', None)
         if q_monto:
@@ -190,6 +174,8 @@ class LicitacionList(object):
 
         if filters:
             licitaciones = licitaciones.where(*filters)
+
+        print licitaciones.sql()
 
         # Get page
         q_page = req.params.get('pagina', '1')

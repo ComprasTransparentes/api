@@ -119,6 +119,7 @@ class MasterPlop(BaseModel):
     fecha_creacion = DateTimeField(null=True)
     fecha_publicacion = DateTimeField(null=True)
     fecha_adjudicacion = DateField(null=True)
+    estado = IntegerField()
     licitacion_codigo = CharField(null=True)
     licitacion = IntegerField(db_column='licitacion_id', null=True)
     licitacion_item = IntegerField(db_column='licitacion_item_id', null=True)
@@ -138,6 +139,40 @@ class MasterPlop(BaseModel):
 
     class Meta:
         db_table = 'master_plop'
+
+
+class MasterPlopAll(BaseModel):
+    ano = IntegerField(null=True)
+    categoria = CharField(db_column='categoria_id', null=True)
+    categoria_primer_nivel = CharField(null=True)
+    categoria_segundo_nivel = CharField(null=True)
+    categoria_tercer_nivel = CharField(null=True)
+    codigo_categoria = IntegerField(null=True)
+    codigo_producto = IntegerField(null=True)
+    company = IntegerField(db_column='company_id', null=True)
+    fecha_creacion = DateTimeField(null=True)
+    fecha_publicacion = DateTimeField(null=True)
+    fecha_adjudicacion = DateField(null=True)
+    estado = IntegerField()
+    licitacion_codigo = CharField(null=True)
+    licitacion = IntegerField(db_column='licitacion_id', null=True)
+    licitacion_item = IntegerField(db_column='licitacion_item_id', null=True)
+    licitacion_descripcion = CharField(null=True)
+    licitacion_nombre = CharField(null=True)
+    mes = IntegerField(null=True)
+    ministerio = IntegerField(db_column='ministerio_id', null=True)
+    monto = FloatField(null=True)
+    nombre = CharField(null=True)
+    nombre_ministerio = CharField(null=True)
+    nombre_organismo = CharField(null=True)
+    nombre_organismo_corto = CharField()
+    nombre_producto = CharField(null=True)
+    organismo = IntegerField(db_column='organismo_id', null=True)
+    region = CharField(null=True)
+    rut_sucursal = CharField(null=True)
+
+    class Meta:
+        db_table = 'master_plop_all'
 
 
 class MinisterioOrganismoMonto(BaseModel):
@@ -201,3 +236,11 @@ class Sumario(BaseModel):
     class Meta:
         db_table = 'sumario'
         primary_key = False
+
+
+class LicitacionEstado(BaseModel):
+    licitacion = IntegerField(db_column='licitacion_id', primary_key=True)
+    estado = IntegerField()
+
+    class Meta:
+        db_table = 'licitacion_estado'

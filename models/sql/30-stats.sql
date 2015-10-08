@@ -74,10 +74,12 @@ USING BTREE
 -- CREO TABLA DE ITEM_LICITACION_ORGANISMO_EMPRESA
 -- Es la mejor, por lo tanto se llama master plop!
 
-DROP TABLE IF EXISTS stats.master_plop;
+-- MASTER PLOPS
 
-CREATE TABLE stats.master_plop AS
-    SELECT DISTINCT
+DROP TABLE IF EXISTS stats.master_plop_all;
+
+CREATE TABLE stats.master_plop_all AS
+    SELECT
         B.id                                                                                  AS licitacion_item_id,
         R.licitacion_id,
         R.nombre as licitacion_nombre,
@@ -86,6 +88,7 @@ CREATE TABLE stats.master_plop AS
         R.fecha_creacion,
         R.fecha_publicacion,
         R.fecha_adjudicacion,
+        S.estado,
         R.catalogo_organismo_id                                                               AS organismo_id,
         R.nombre_organismo,
         R.nombre_organismo_plot                                                               AS nombre_organismo_corto,
@@ -107,25 +110,76 @@ CREATE TABLE stats.master_plop AS
         ELSE cast(A.cantidad AS FLOAT) END * cast(A.monto_unitario AS FLOAT) * QQ.tipo_cambio AS monto,
         cast(substring(S.fecha FROM 3 FOR 2) AS INTEGER)                                      AS mes,
         cast(substring(S.fecha FROM 5 FOR 4) AS INTEGER)                                      AS ano
-    FROM adjudication_items A
-        LEFT JOIN tender_items B
-            ON A.tender_item_id = B.id
+    FROM tenders T
         INNER JOIN (
-                       SELECT
-                           tender_id AS tenderId,
-                           date      AS fecha
-                       FROM tender_states
-                       WHERE state = '8'
-                   ) S
-            ON B.tender_id = S.tenderId
-        inner JOIN stats.licitacion_master R
+           SELECT
+               ts.tender_id AS licitacion_id,
+               ts.date AS fecha,
+               max(ts.state) AS estado
+           FROM tender_states ts JOIN
+               (
+                   SELECT
+                       tender_id,
+                       max(to_date(date, 'DDMMYYYY')) AS date
+                   FROM tender_states
+                   GROUP BY tender_id
+               ) rs
+                   ON ts.tender_id = rs.tender_id AND to_date(ts.date, 'DDMMYYY') = rs.date
+           GROUP BY ts.tender_id, ts.date
+       ) S
+            ON T.id = S.licitacion_id
+        LEFT JOIN tender_items B
+            ON T.id = B.tender_id
+        LEFT JOIN adjudication_items A
+            ON B.id = A.tender_item_id
+        INNER JOIN stats.licitacion_master R
             ON R.licitacion_id = B.tender_id
-        LEFT JOIN _currency QQ
+        INNER JOIN _currency QQ
             ON QQ.moneda = R.moneda
-        LEFT JOIN companies CC
+        INNER JOIN companies CC
             ON A.company_id = CC.id
         INNER JOIN _categoria_producto XD
             ON B.categoria = XD.categoria
+    ORDER BY licitacion_id, licitacion_item_id;
+
+CREATE INDEX master_plop_all_licitacion_nombre_idx
+ON stats.master_plop_all
+USING GIN (to_tsvector('spanish', licitacion_nombre));
+
+CREATE INDEX master_plop_all_licitacion_descripcion_idx
+ON stats.master_plop_all
+USING GIN (to_tsvector('spanish',licitacion_descripcion));
+
+CREATE INDEX master_plop_all_licitacion_id_idx
+ON stats.master_plop_all
+USING BTREE (licitacion_id);
+
+CREATE INDEX master_plop_all_organismo_id_idx
+ON stats.master_plop_all
+USING BTREE (organismo_id);
+
+CREATE INDEX master_plop_all_company_id_idx
+ON stats.master_plop_all
+USING BTREE (company_id);
+
+CREATE INDEX master_plop_all_monto_idx
+ON stats.master_plop_all
+USING BTREE (monto);
+
+CREATE INDEX master_plop_all_fecha_creacion_idx
+ON stats.master_plop_all
+USING BTREE (fecha_creacion);
+
+CREATE INDEX master_plop_all_estado_idx
+ON stats.master_plop_all
+USING BTREE (estado);
+
+DROP TABLE IF EXISTS stats.master_plop;
+
+CREATE TABLE stats.master_plop AS
+    SELECT *
+    FROM stats.master_plop_all
+    WHERE estado = 8
     ORDER BY licitacion_id, licitacion_item_id;
 
 CREATE INDEX master_plop_licitacion_nombre_idx
@@ -151,6 +205,41 @@ USING BTREE (company_id);
 CREATE INDEX master_plop_monto_idx
 ON stats.master_plop
 USING BTREE (monto);
+
+CREATE INDEX master_plop_fecha_creacion_idx
+ON stats.master_plop
+USING BTREE (fecha_creacion);
+
+-- ESTADOS MAS RECIENTES
+
+CREATE TABLE stats.licitacion_estado
+(
+    licitacion_id INTEGER PRIMARY KEY,
+    estado        INTEGER NOT NULL
+);
+
+INSERT INTO stats.licitacion_estado (licitacion_id, estado)
+    SELECT
+        ts.tender_id,
+        max(ts.state)
+    FROM tender_states ts JOIN
+        (
+            SELECT
+                tender_id,
+                max(to_date(date, 'DDMMYYYY')) AS date
+            FROM tender_states
+            GROUP BY tender_id
+        ) rs
+            ON ts.tender_id = rs.tender_id AND to_date(ts.date, 'DDMMYYY') = rs.date
+    GROUP BY ts.tender_id;
+
+CREATE INDEX licitacion_estado_licitacion_id_idx
+ON stats.licitacion_estado
+USING BTREE (licitacion_id);
+
+CREATE INDEX licitacion_estado_estado_idx
+ON stats.licitacion_estado
+USING BTREE (estado);
 
 -- COMPARADOR
 
