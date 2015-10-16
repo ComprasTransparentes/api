@@ -89,10 +89,52 @@ class ProveedorItem(object):
         resp.body = response
 
 
-class ProveedorLicitacion(object):
+class ProveedorEmbed(object):
 
     @database.atomic()
     def on_get(self, req, resp, proveedor_id=None):
+
+        # Get the proveedor
+        try:
+            proveedor = Proveedor.get(Proveedor.id == proveedor_id)
+        except Proveedor.DoesNotExist:
+            raise falcon.HTTPNotFound()
+
+        response = model_to_dict(proveedor, backrefs=False)
+
+        monto_adjudicado = models_stats.MasterPlop.select(
+            models_stats.MasterPlop.company,
+            fn.sum(models_stats.MasterPlop.monto).alias('monto')
+        ).group_by(
+            models_stats.MasterPlop.company
+        ).where(
+            models_stats.MasterPlop.company == proveedor_id
+        ).first().monto
+
+        licitaciones = models_stats.MasterPlop.select(
+            models_stats.MasterPlop.licitacion
+        ).where(
+            models_stats.MasterPlop.company == proveedor_id
+        ).distinct()
+
+        response['extra'] = {
+            'monto_adjudicado': monto_adjudicado,
+            'n_licitaciones': licitaciones.count(),
+        }
+
+        response = json.dumps(response, cls=JSONEncoderPlus, sort_keys=True)
+
+        callback = req.params.get('callback', None)
+        if callback:
+            response = "%s(%s)" % (callback, response)
+
+        resp.body = response
+
+
+class ProveedorLicitacion(object):
+
+    @database.atomic()
+    def on_get(self, req, resp):
 
         licitacion_monto_adjudicado = models_stats.MasterPlop.select(
             models_stats.MasterPlop.licitacion.alias('id'),

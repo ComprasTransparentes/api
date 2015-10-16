@@ -58,7 +58,7 @@ class OrganismoItem(object):
             models_stats.MasterPlop.licitacion
         ).where(
             models_stats.MasterPlop.organismo == organismo_id
-        ).alias('licitaciones_organismo_')
+        ).alias('licitaciones_organismo_global')
 
         top_licitaciones_organismo = models_stats.MasterPlop.select(
             models_stats.MasterPlop.licitacion.alias('id'),
@@ -137,6 +137,70 @@ class OrganismoItem(object):
             # 'monto_total': 123,
             # 'monto_promedio': 123,
             # 'cantidad_proveedores': 123
+        }
+
+        response = json.dumps(response, cls=JSONEncoderPlus, sort_keys=True)
+
+        callback = req.params.get('callback', None)
+        if callback:
+            response = "%s(%s)" % (callback, response)
+
+        resp.body = response
+
+
+class OrganismoEmbed(object):
+
+    @database.atomic()
+    def on_get(self, req, resp, organismo_id):
+
+        # Get the organismo
+        try:
+
+            organismo = models_old.Jerarquia.get(models_old.Jerarquia.catalogo_organismo == organismo_id)
+
+        except models_old.Jerarquia.DoesNotExist:
+            raise falcon.HTTPNotFound()
+
+        response = {
+            'id': organismo.catalogo_organismo,
+            'categoria': organismo.ministerio_nombre,
+            'codigo_comprador': organismo.organismo_codigo,
+            'nombre_comprador': organismo.organismo_nombre
+        }
+
+        licitaciones_organismo_global = models_stats.MasterPlop.select(
+            models_stats.MasterPlop.licitacion.alias('id'),
+            fn.sum(models_stats.MasterPlop.monto).alias('monto_global'),
+        ).group_by(
+            models_stats.MasterPlop.licitacion
+        ).where(
+            models_stats.MasterPlop.organismo == organismo_id
+        ).alias('licitaciones_organismo_global')
+
+        licitaciones_organismo = models_stats.MasterPlop.select(
+            models_stats.MasterPlop.licitacion.alias('id'),
+            models_stats.MasterPlop.licitacion_codigo.alias('codigo'),
+            models_stats.MasterPlop.licitacion_nombre.alias('nombre'),
+            models_stats.MasterPlop.licitacion_descripcion.alias('descripcion'),
+            models_stats.MasterPlop.fecha_creacion.alias('fecha_creacion'),
+            licitaciones_organismo_global.c.monto_global.alias('monto')
+        ).join(
+            licitaciones_organismo_global,
+            on=(models_stats.MasterPlop.licitacion == licitaciones_organismo_global.c.id)
+        )
+
+        # Licitaciones
+
+        licitaciones = models_stats.LicitacionMaster.select(
+            models_stats.LicitacionMaster.licitacion
+        ).where(
+            models_stats.LicitacionMaster.catalogo_organismo == organismo_id
+        )
+
+        response['extra'] = {
+            'n_licitaciones':               licitaciones.count(),
+            'n_licitaciones_adjudicadas':   licitaciones_organismo.count(),
+            'monto_adjudicado':             int(licitaciones_organismo.select(fn.sum(SQL('monto')).alias('monto_adjudicado')).first().monto_adjudicado),
         }
 
         response = json.dumps(response, cls=JSONEncoderPlus, sort_keys=True)
