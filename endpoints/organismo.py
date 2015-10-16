@@ -34,23 +34,6 @@ class OrganismoItem(object):
             'nombre_comprador': organismo.organismo_nombre
         }
 
-        # Estados
-        estados_recientes = LicitacionEstado.select(
-            LicitacionEstado.licitacion,
-            fn.max(LicitacionEstado.fecha).alias('fecha')
-        ).group_by(
-            LicitacionEstado.licitacion
-        ).alias('estados_recientes')
-
-        licitacion_estados = LicitacionEstado.select(
-            LicitacionEstado.licitacion,
-            LicitacionEstado.estado,
-            estados_recientes.c.fecha
-        ).join(
-            estados_recientes,
-            on=((LicitacionEstado.licitacion == estados_recientes.c.licitacion_id) & (LicitacionEstado.fecha == estados_recientes.c.fecha))
-        ).alias('licitacion_estados')
-
         top_licitaciones_organismo_global = models_stats.MasterPlop.select(
             models_stats.MasterPlop.licitacion.alias('id'),
             fn.sum(models_stats.MasterPlop.monto).alias('monto_global'),
@@ -70,7 +53,7 @@ class OrganismoItem(object):
         ).join(
             top_licitaciones_organismo_global,
             on=(models_stats.MasterPlop.licitacion == top_licitaciones_organismo_global.c.id)
-        )
+        ).distinct()
 
         # Top proveedores
         top_proveedores = models_stats.MasterPlop.select(
