@@ -112,8 +112,8 @@ class LicitacionList(object):
         if q_fecha_creacion:
             q_fecha_creacion = q_fecha_creacion.split('|')
             try:
-                fecha_creacion_min = dateutil.parser.parse(q_fecha_creacion[0]) if q_fecha_creacion[0] else None
-                fecha_creacion_max = dateutil.parser.parse(q_fecha_creacion[1]) if q_fecha_creacion[1] else None
+                fecha_creacion_min = dateutil.parser.parse(q_fecha_creacion[0], dayfirst=True, yearfirst=True) if q_fecha_creacion[0] else None
+                fecha_creacion_max = dateutil.parser.parse(q_fecha_creacion[1], dayfirst=True, yearfirst=True) if q_fecha_creacion[1] else None
             except IndexError:
                 raise falcon.HTTPBadRequest("Wrong creation date", "dates must be separated by a pipe [|]")
             except ValueError:
@@ -128,8 +128,8 @@ class LicitacionList(object):
         if q_fecha_publicacion:
             q_fecha_publicacion = q_fecha_publicacion.split('|')
             try:
-                fecha_publicacion_min = dateutil.parser.parse(q_fecha_publicacion[0]) if q_fecha_publicacion[0] else None
-                fecha_publicacion_max = dateutil.parser.parse(q_fecha_publicacion[1]) if q_fecha_publicacion[1] else None
+                fecha_publicacion_min = dateutil.parser.parse(q_fecha_publicacion[0], dayfirst=True, yearfirst=True) if q_fecha_publicacion[0] else None
+                fecha_publicacion_max = dateutil.parser.parse(q_fecha_publicacion[1], dayfirst=True, yearfirst=True) if q_fecha_publicacion[1] else None
             except IndexError:
                 raise falcon.HTTPBadRequest("Wrong creation date", "dates must be separated by a pipe [|]")
             except ValueError:
@@ -144,8 +144,8 @@ class LicitacionList(object):
         if q_fecha_adjudicacion:
             q_fecha_adjudicacion = q_fecha_adjudicacion.split('|')
             try:
-                fecha_adjudicacion_min = dateutil.parser.parse(q_fecha_adjudicacion[0]) if q_fecha_adjudicacion[0] else None
-                fecha_adjudicacion_max = dateutil.parser.parse(q_fecha_adjudicacion[1]) if q_fecha_adjudicacion[1] else None
+                fecha_adjudicacion_min = dateutil.parser.parse(q_fecha_adjudicacion[0], dayfirst=True, yearfirst=True) if q_fecha_adjudicacion[0] else None
+                fecha_adjudicacion_max = dateutil.parser.parse(q_fecha_adjudicacion[1], dayfirst=True, yearfirst=True) if q_fecha_adjudicacion[1] else None
             except IndexError:
                 raise falcon.HTTPBadRequest("Wrong creation date", "dates must be separated by a pipe [|]")
             except ValueError:
