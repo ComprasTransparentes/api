@@ -17,7 +17,7 @@ class OrganismoItem(object):
     ALLOWED_FILTERS = ['producto']
 
     @database.atomic()
-    def on_get(self, req, resp, organismo_id=None):
+    def on_get(self, req, resp, organismo_id):
 
         # Get the organismo
         try:

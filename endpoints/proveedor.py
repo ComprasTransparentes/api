@@ -13,7 +13,7 @@ from utils.mypeewee import ts_match
 class ProveedorItem(object):
 
     @database.atomic()
-    def on_get(self, req, resp, proveedor_id=None):
+    def on_get(self, req, resp, proveedor_id):
 
         # Get the proveedor
         try:
@@ -134,7 +134,7 @@ class ProveedorEmbed(object):
 class ProveedorLicitacion(object):
 
     @database.atomic()
-    def on_get(self, req, resp):
+    def on_get(self, req, resp, proveedor_id):
 
         licitacion_monto_adjudicado = models_stats.MasterPlop.select(
             models_stats.MasterPlop.licitacion.alias('id'),
