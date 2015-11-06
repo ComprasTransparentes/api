@@ -1,11 +1,13 @@
 import json
 
 import falcon
+import peewee
 import dateutil.parser
 
+from peewee import fn, SQL
 from playhouse.shortcuts import model_to_dict
 
-from models.models_bkn import *
+from models import models_bkn
 from models import models_stats
 from utils.myjson import JSONEncoderPlus
 from utils.mypeewee import ts_match, ts_rank
@@ -13,10 +15,8 @@ from utils.mypeewee import ts_match, ts_rank
 
 class LicitacionItem(object):
 
-    @database.atomic()
+    @models_bkn.database.atomic()
     def on_get(self, req, resp, licitacion_id=None):
-
-        print req.headers
 
         p_items = req.params.get('p_items', '1')
         p_items = max(int(p_items) if p_items.isdigit() else 1, 1)
@@ -24,21 +24,54 @@ class LicitacionItem(object):
         # Get the licitacion
         try:
             if '-' in licitacion_id:
-                licitacion = Licitacion.get(Licitacion.codigo == licitacion_id)
+                licitacion = models_bkn.Licitacion.get(models_bkn.Licitacion.codigo == licitacion_id)
             elif licitacion_id.isdigit():
-                licitacion = Licitacion.get(Licitacion.id == licitacion_id)
+                licitacion = models_bkn.Licitacion.get(models_bkn.Licitacion.id == licitacion_id)
             else:
-                raise Licitacion.DoesNotExist()
+                raise models_bkn.Licitacion.DoesNotExist()
 
-        except Licitacion.DoesNotExist:
+        except models_bkn.Licitacion.DoesNotExist:
             raise falcon.HTTPNotFound()
 
         items = licitacion.items.order_by(SQL('id'))
 
         response = model_to_dict(licitacion, backrefs=True)
         response['comprador']['id'] = response['comprador']['jerarquia_id']
-        response['items'] = [model_to_dict(item, backrefs=True) for item in items.paginate(p_items, 10).iterator()]
+        response['items'] = [model_to_dict(item, exclude=[models_bkn.LicitacionItem.licitacion], backrefs=True) for item in items.paginate(p_items, 10).iterator()]
         response['n_items'] = items.count()
+        response = json.dumps(response, cls=JSONEncoderPlus, sort_keys=True)
+
+        callback = req.params.get('callback', None)
+        if callback:
+            response = "%s(%s)" % (callback, response)
+
+        resp.body = response
+
+
+class LicitacionItemItem(object):
+
+    @models_bkn.database.atomic()
+    def on_get(self, req, resp, licitacion_id):
+
+        # Get the licitacion
+        try:
+            if '-' in licitacion_id:
+                licitacion = models_bkn.Licitacion.get(models_bkn.Licitacion.codigo == licitacion_id)
+            elif licitacion_id.isdigit():
+                licitacion = models_bkn.Licitacion.get(models_bkn.Licitacion.id == licitacion_id)
+            else:
+                raise models_bkn.Licitacion.DoesNotExist()
+
+        except models_bkn.Licitacion.DoesNotExist:
+            raise falcon.HTTPNotFound()
+
+        items = licitacion.items.order_by(SQL('id'))
+
+        response = {
+            'items': [model_to_dict(item, exclude=[models_bkn.LicitacionItem.licitacion],backrefs=True) for item in items],
+            'n_items': items.count(),
+        }
+
         response = json.dumps(response, cls=JSONEncoderPlus, sort_keys=True)
 
         callback = req.params.get('callback', None)
@@ -52,7 +85,7 @@ class LicitacionList(object):
 
     MAX_RESULTS = 10
 
-    @database.atomic()
+    @models_bkn.database.atomic()
     def on_get(self, req, resp):
 
         # Get all licitaciones
@@ -174,8 +207,6 @@ class LicitacionList(object):
 
         if filters:
             licitaciones = licitaciones.where(*filters)
-
-        print licitaciones.sql()
 
         # Get page
         q_page = req.params.get('pagina', '1')
