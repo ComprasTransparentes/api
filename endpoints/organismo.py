@@ -231,11 +231,13 @@ class OrganismoLicitacion(object):
             models_stats.LicitacionMaster.fecha_creacion.desc()
         )
 
-        p_licitaciones = req.params.get('pagina', '1')
-        p_licitaciones = max(int(p_licitaciones) if p_licitaciones.isdigit() else 1, 1)
+        p_licitaciones = req.params.get('pagina', None)
+        if p_licitaciones:
+            p_licitaciones = max(int(p_licitaciones) if p_licitaciones.isdigit() else 1, 1)
+            licitaciones = licitaciones.paginate(p_licitaciones, 10)
 
         response = {
-            'licitaciones' : [licitacion for licitacion in licitaciones.paginate(p_licitaciones, 10).dicts()],
+            'licitaciones' : [licitacion for licitacion in licitaciones.dicts()],
             'n_licitaciones': licitaciones.count()
         }
 

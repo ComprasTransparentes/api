@@ -85,7 +85,7 @@ class LicitacionList(object):
 
     MAX_RESULTS = 10
 
-    @models_bkn.database.atomic()
+    @models_stats.database.atomic()
     def on_get(self, req, resp):
 
         # Get all licitaciones
@@ -113,7 +113,6 @@ class LicitacionList(object):
         q_q = req.params.get('q', None)
         if q_q:
             # TODO Try to make just one query over one index instead of two or more ORed queries
-
             filters.append(ts_match(models_stats.MasterPlopAll.licitacion_nombre, q_q) | ts_match(models_stats.MasterPlopAll.licitacion_descripcion, q_q))
 
         q_producto = req.params.get('producto', None)
