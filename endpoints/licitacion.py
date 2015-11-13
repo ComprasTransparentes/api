@@ -38,6 +38,16 @@ class LicitacionItem(object):
         response = model_to_dict(licitacion, backrefs=True)
         response['comprador']['id'] = response['comprador']['jerarquia_id']
         response['items'] = [model_to_dict(item, exclude=[models_bkn.LicitacionItem.licitacion], backrefs=True) for item in items.paginate(p_items, 10).iterator()]
+
+        monto_adjudicado = 0
+        n_items_adjudicados = 0
+        for item in items:
+            if item.adjudicacion:
+                n_items_adjudicados += 1
+                monto_adjudicado += int((item.adjudicacion.cantidad or 0) * (item.adjudicacion.monto_unitario or 0))
+        response['n_items_adjudicados'] = n_items_adjudicados
+        response['monto_adjudicado'] = monto_adjudicado
+
         response['n_items'] = items.count()
         response = json.dumps(response, cls=JSONEncoderPlus, sort_keys=True)
 

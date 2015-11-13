@@ -221,6 +221,7 @@ class OrganismoLicitacion(object):
             models_stats.LicitacionMaster.licitacion_codigo.alias('codigo'),
             models_stats.LicitacionMaster.nombre.alias('nombre'),
             models_stats.LicitacionMaster.fecha_creacion,
+            models_stats.LicitacionMaster.fecha_adjudicacion,
             licitacion_estados.c.estado.alias('estado')
         ).join(
             licitacion_estados,
