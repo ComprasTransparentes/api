@@ -4,7 +4,7 @@ from middlewares.cors import CorsMiddleware
 
 from endpoints.licitacion import LicitacionItem, LicitacionItemItem, LicitacionList
 from endpoints.ministerio import MinisterioStatsItem
-from endpoints.organismo import OrganismoItem, OrganismoList, OrganismoLicitacion, OrganismoEmbed
+from endpoints.organismo import OrganismoItem, OrganismoList, OrganismoLicitacion, OrganismoEmbed, OrganismoCategoriaList
 from endpoints.proveedor import ProveedorItem, ProveedorList, ProveedorLicitacion, ProveedorEmbed
 from endpoints.stats import StatsItem, StatsTop
 
@@ -22,6 +22,7 @@ app.add_route('/organismo/', OrganismoList())
 app.add_route('/organismo/{organismo_id}', OrganismoItem())
 app.add_route('/organismo/{organismo_id}/licitacion', OrganismoLicitacion())
 app.add_route('/organismo/{organismo_id}/embed', OrganismoEmbed())
+app.add_route('/organismo/{organismo_id}/categoria', OrganismoCategoriaList())
 
 app.add_route('/proveedor/', ProveedorList())
 app.add_route('/proveedor/{proveedor_id}', ProveedorItem())

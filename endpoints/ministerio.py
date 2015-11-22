@@ -10,6 +10,7 @@ from models import models as models_old
 from models.models_stats import *
 
 
+
 class MinisterioStatsItem(object):
 
     @database.atomic()

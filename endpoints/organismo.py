@@ -49,6 +49,7 @@ class OrganismoItem(object):
             models_stats.MasterPlop.licitacion_nombre.alias('nombre'),
             models_stats.MasterPlop.licitacion_descripcion.alias('descripcion'),
             models_stats.MasterPlop.fecha_creacion.alias('fecha_creacion'),
+            models_stats.MasterPlop.fecha_adjudicacion.alias('fecha_adjudicacion'),
             top_licitaciones_organismo_global.c.monto_global.alias('monto')
         ).join(
             top_licitaciones_organismo_global,
@@ -245,7 +246,6 @@ class OrganismoLicitacion(object):
 class OrganismoList(object):
 
     ALLOWED_PARAMS = ['q']
-    MAX_RESULTS = 10
 
     @database.atomic()
     def on_get(self, req, resp):
@@ -258,18 +258,43 @@ class OrganismoList(object):
             models_old.Jerarquia.organismo_nombre.alias('nombre'),
         ).distinct()
 
-        # Get page
-        q_page = req.params.get('pagina', '1')
-        q_page = max(int(q_page) if q_page.isdigit() else 1, 1)
 
         q_q = req.params.get('q', None)
         if q_q:
             organismos = organismos.where(ts_match(models_old.Jerarquia.organismo_codigo, q_q) | ts_match(models_old.Jerarquia.ministerio_nombre, q_q))
 
+        # Get page
+        q_page = req.params.get('pagina', None)
+        if q_page:
+            q_page = max(int(q_page) if q_page.isdigit() else 1, 1)
+            organismos.paginate(q_page, 10)
 
         response = {
             'n_organismos': organismos.count(),
-            'organismos': [organismo for organismo in organismos.order_by(models_old.Jerarquia.organismo_codigo).paginate(q_page, OrganismoList.MAX_RESULTS).dicts()]
+            'organismos': [organismo for organismo in organismos.order_by(models_old.Jerarquia.organismo_codigo).dicts()]
+        }
+
+        resp.body = json.dumps(response, cls=JSONEncoderPlus, sort_keys=True)
+
+
+class OrganismoCategoriaList(object):
+
+    @database.atomic()
+    def on_get(self, req, resp, organismo_id):
+
+        # Get all categories
+
+        categorias = models_old.CategoriaProucto1.select()
+
+        # Get page
+        q_page = req.params.get('pagina', None)
+        if q_page:
+            q_page = max(int(q_page) if q_page.isdigit() else 1, 1)
+            categorias.paginate(q_page, 10)
+
+        response = {
+            'n_organismos': categorias.count(),
+            'organismos': [organismo for organismo in categorias.dicts()]
         }
 
         resp.body = json.dumps(response, cls=JSONEncoderPlus, sort_keys=True)

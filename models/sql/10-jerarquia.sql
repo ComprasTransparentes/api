@@ -3734,3 +3734,15 @@ INSERT INTO _categoria_producto (id, categoria, categoria_1, categoria_2, catego
     (1952, 'Organizaciones sociales, laborales y clubes / Organizaciones, asociaciones y movimientos cívicos / Organizaciones de beneficencia', 'Organizaciones sociales, laborales y clubes', 'Organizaciones, asociaciones y movimientos cívicos', 'Organizaciones de beneficencia'),
     (1953, 'Organizaciones sociales, laborales y clubes / Organizaciones, asociaciones y movimientos cívicos / Movimientos sociales', 'Organizaciones sociales, laborales y clubes', 'Organizaciones, asociaciones y movimientos cívicos', 'Movimientos sociales'),
     (1954, 'Organizaciones sociales, laborales y clubes / Organizaciones, asociaciones y movimientos cívicos / Asociaciones de protección de animales', 'Organizaciones sociales, laborales y clubes', 'Organizaciones, asociaciones y movimientos cívicos', 'Asociaciones de protección de animales');
+
+
+CREATE TABLE _categoria_producto_1 AS
+    SELECT
+        row_number() OVER () AS id,
+        categoria_1 AS categoria
+    FROM
+        (
+            SELECT DISTINCT categoria_1
+            FROM _categoria_producto
+            ORDER BY categoria_1
+        ) A;

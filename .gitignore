@@ -1,6 +1,5 @@
-.DS_Store
-.idea/
+.*/
 _*/
+.*
+_*
 *.pyc
-.env
-peewee.db

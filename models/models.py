@@ -371,3 +371,10 @@ class CategoriaProucto(BaseModel):
 
     class Meta:
         db_table = '_categoria_producto'
+
+
+class CategoriaProucto1(BaseModel):
+    categoria = CharField()
+
+    class Meta:
+        db_table = '_categoria_producto_1'
