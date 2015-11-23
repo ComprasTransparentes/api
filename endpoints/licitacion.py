@@ -132,7 +132,7 @@ class LicitacionItemItem(object):
             'items': [
                 {
                     'adjudicacion': {
-                        'cantidad': item['cantidad'],
+                        'cantidad': float(item['cantidad_adjudicada']),
                         'monto_unitario': int(item['monto_pesos_adjudicado']) if item['monto_pesos_adjudicado'] else None,
                         'monto_total': int(item['monto_total']) if item['monto_total'] else None,
 
