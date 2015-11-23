@@ -25,21 +25,82 @@ class LicitacionItem(object):
         # Get the licitacion
         try:
             if '-' in licitacion_id:
-                licitacion = models_bkn.Licitacion.get(models_bkn.Licitacion.codigo == licitacion_id)
+                licitacion = models_api.Licitacion.get(models_api.Licitacion.codigo_licitacion == licitacion_id)
             elif licitacion_id.isdigit():
-                licitacion = models_bkn.Licitacion.get(models_bkn.Licitacion.id == licitacion_id)
+                licitacion_id = int(licitacion_id)
+                licitacion = models_api.Licitacion.get(models_api.Licitacion.id_licitacion == licitacion_id)
             else:
-                raise models_bkn.Licitacion.DoesNotExist()
-
-        except models_bkn.Licitacion.DoesNotExist:
+                raise models_api.Licitacion.DoesNotExist()
+        except models_api.Licitacion.DoesNotExist:
             raise falcon.HTTPNotFound()
+        finally:
+            licitacion = model_to_dict(licitacion)
 
-        items = licitacion.items.order_by(SQL('id'))
+        response = {
+            'id': licitacion['id_licitacion'],
+            'codigo': licitacion['codigo_licitacion'],
 
-        response = model_to_dict(licitacion, backrefs=True)
-        response['comprador']['id'] = response['comprador']['jerarquia_id']
-        response['items'] = [model_to_dict(item, exclude=[models_bkn.LicitacionItem.licitacion], backrefs=True) for item in items.paginate(p_items, 10).iterator()]
-        response['n_items'] = items.count()
+            'nombre': licitacion['nombre_licitacion'],
+            'descripcion': licitacion['descripcion_licitacion'],
+
+            'organismo': {
+                'id': licitacion['id_organismo'],
+
+                'categoria': licitacion['nombre_ministerio'],
+                'nombre': licitacion['nombre_organismo']
+            },
+
+            'unidad': {
+                'nombre': licitacion['nombre_unidad'],
+                'rut': licitacion['rut_unidad'],
+                'region': licitacion['region_unidad'],
+                'comuna': licitacion['comuna_unidad'],
+                'direccion': licitacion['direccion_unidad']
+            },
+
+            'usuario': {
+                'cargo': licitacion['cargo_usuario_organismo'],
+                'nombre': licitacion['nombre_usuario_organismo'],
+                'rut': licitacion['rut_usuario_organismo']
+            },
+
+            'responsable_contrato': {
+                'nombre': licitacion['nombre_responsable_contrato'],
+                'telefono': licitacion['fono_responsable_contrato'],
+                'email': licitacion['email_responsable_contrato']
+            },
+
+            'responsable_pago': {
+                'nombre': licitacion['nombre_responsable_pago'],
+                'email': licitacion['email_responsable_pago']
+            },
+
+            'estado': licitacion['estado'],
+            'fecha_cabio_estado': licitacion['fecha_cambio_estado'],
+
+            'fecha_creacion': licitacion['fecha_creacion'],
+            'fecha_publicacion': licitacion['fecha_publicacion'],
+            'fecha_inicio': licitacion['fecha_inicio'],
+            'fecha_final': licitacion['fecha_final'],
+            'fecha_cierre': licitacion['fecha_cierre'],
+            'fecha_estimada_adjudicacion': licitacion['fecha_estimada_adjudicacion'],
+
+            'n_items': licitacion['items_totales'],
+
+            'adjudicacion': {
+                'n_items': licitacion['items_adjudicados'],
+                'monto': int(licitacion['monto_total']) if licitacion['monto_total'] else None,
+                'acta': licitacion['url_acta'],
+            } if licitacion['url_acta'] else None, # Only if there is an acta
+
+            'categorias': [
+                {
+                    'id': licitacion['id_categoria_nivel1'][i],
+                    'nombre': licitacion['categoria_nivel1'][i],
+                }
+            for i in range(len(licitacion['id_categoria_nivel1']))]
+        }
+
         response = json.dumps(response, cls=JSONEncoderPlus, sort_keys=True)
 
         callback = req.params.get('callback', None)
@@ -56,21 +117,46 @@ class LicitacionItemItem(object):
 
         # Get the licitacion
         try:
-            if '-' in licitacion_id:
-                licitacion = models_bkn.Licitacion.get(models_bkn.Licitacion.codigo == licitacion_id)
-            elif licitacion_id.isdigit():
-                licitacion = models_bkn.Licitacion.get(models_bkn.Licitacion.id == licitacion_id)
+            if licitacion_id.isdigit():
+                licitacion_id = int(licitacion_id)
+                items = models_api.LicitacionIdItem.select().filter(models_api.LicitacionIdItem.licitacion == licitacion_id)
             else:
-                raise models_bkn.Licitacion.DoesNotExist()
-
+                raise models_api.LicitacionIdItem.DoesNotExist()
         except models_bkn.Licitacion.DoesNotExist:
             raise falcon.HTTPNotFound()
 
-        items = licitacion.items.order_by(SQL('id'))
+        print items.sql()
 
         response = {
-            'items': [model_to_dict(item, exclude=[models_bkn.LicitacionItem.licitacion],backrefs=True) for item in items],
             'n_items': items.count(),
+            'items': [
+                {
+                    'adjudicacion': {
+                        'cantidad': item['cantidad'],
+                        'monto_unitario': int(item['monto_pesos_adjudicado']) if item['monto_pesos_adjudicado'] else None,
+                        'monto_total': int(item['monto_total']) if item['monto_total'] else None,
+
+                        'fecha': item['fecha_adjudicacion'],
+
+                        'proveedor': {
+                            'id': item['id_empresa'],
+                            'nombre': item['nombre_empresa'],
+                            'rut': item['rut_sucursal']
+                        }
+                    } if item['id_empresa'] else None,
+
+                    'codigo_categoria': item['codigo_categoria'],
+                    'nombre_categoria': item['categoria_global'],
+
+                    'codigo_producto': item['codigo_producto'],
+                    'nombre_producto': item['nombre_producto'],
+
+                    'descripcion': item['descripcion'],
+
+                    'unidad': item['unidad_medida'],
+                    'cantidad': item['cantidad']
+                }
+            for item in items.dicts()]
         }
 
         response = json.dumps(response, cls=JSONEncoderPlus, sort_keys=True)

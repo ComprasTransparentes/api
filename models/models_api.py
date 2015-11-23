@@ -81,6 +81,7 @@ class LicitacionIdItem(BaseModel):
     correlativo = IntegerField(null=True)
     descripcion = CharField(null=True)
     fecha_adjudicacion = CharField(null=True)
+    id_empresa = IntegerField(null=True)
     licitacion = ForeignKeyField(Licitacion, db_column='licitacion_id', related_name='items')
     monto_pesos_adjudicado = DecimalField(null=True)
     monto_total = DecimalField(null=True)
@@ -91,6 +92,7 @@ class LicitacionIdItem(BaseModel):
 
     class Meta:
         db_table = 'licitacion_id_item'
+        primary_key = False
 
 class OrganismoStats(BaseModel):
     id_organismo = PrimaryKeyField()
