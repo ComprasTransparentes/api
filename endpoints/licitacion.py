@@ -9,6 +9,7 @@ from playhouse.shortcuts import model_to_dict
 
 from models import models_bkn
 from models import models_stats
+from models import models_api
 from utils.myjson import JSONEncoderPlus
 from utils.mypeewee import ts_match, ts_rank
 
@@ -85,110 +86,48 @@ class LicitacionList(object):
 
     MAX_RESULTS = 10
 
+    """
+    q
+    categoria_producto
+    """
+
     @models_bkn.database.atomic()
     def on_get(self, req, resp):
 
         # Get all licitaciones
-        licitaciones = models_stats.MasterPlopAll.select(
-            models_stats.MasterPlopAll.licitacion.alias('id'),
-            models_stats.MasterPlopAll.licitacion_codigo.alias('codigo'),
-            models_stats.MasterPlopAll.licitacion_nombre.alias('nombre'),
-            models_stats.MasterPlopAll.licitacion_descripcion.alias('descripcion'),
-            models_stats.MasterPlopAll.fecha_creacion.alias('fecha_creacion'),
-            models_stats.MasterPlopAll.organismo.alias('organismo_id'),
-            models_stats.MasterPlopAll.nombre_organismo.alias('organismo_nombre'),
-            fn.sum(models_stats.MasterPlopAll.monto).alias('monto')
-        ).group_by(
-            models_stats.MasterPlopAll.licitacion,
-            models_stats.MasterPlopAll.licitacion_codigo,
-            models_stats.MasterPlopAll.licitacion_nombre,
-            models_stats.MasterPlopAll.licitacion_descripcion,
-            models_stats.MasterPlopAll.fecha_creacion,
-            models_stats.MasterPlopAll.organismo,
-            models_stats.MasterPlopAll.nombre_organismo
-        )
+        licitaciones = models_api.Licitacion.select()
 
         filters = []
 
+        # Search by text
         q_q = req.params.get('q', None)
         if q_q:
             # TODO Try to make just one query over one index instead of two or more ORed queries
 
-            filters.append(ts_match(models_stats.MasterPlopAll.licitacion_nombre, q_q) | ts_match(models_stats.MasterPlopAll.licitacion_descripcion, q_q))
+            filters.append(ts_match(models_api.Licitacion.nombre_licitacion, q_q) | ts_match(models_api.Licitacion.descripcion_licitacion, q_q))
 
-        q_producto = req.params.get('producto', None)
-        if q_producto:
-            if not q_producto.isdigit():
-                raise falcon.HTTPBadRequest("Wrong product code", "product code must be an integer")
-            q_producto = int(q_producto)
+        # Search by categoria_producto
+        # TODO Support multiple params of the same type
+        q_categoria_producto = req.params.get('categoria_producto', None)
+        if q_categoria_producto:
+            # Check param is digit
+            if not q_categoria_producto.isdigit():
+                raise falcon.HTTPBadRequest("Wrong categoria_producto code", "categoria_producto must be an integer")
+            q_producto = int(q_categoria_producto)
 
-            # licitacion_id with items of type q_product
-            licitaciones_producto = models_stats.MasterPlopAll.select(
-                models_stats.MasterPlopAll.licitacion
-            ).where(
-                models_stats.MasterPlopAll.categoria == q_producto
-            ).distinct()
+            filters.append(models_api.Licitacion.id_categoria_nivel1.contains(q_categoria_producto))
 
-            # Add filter
-            filters.append(models_stats.MasterPlopAll.licitacion << licitaciones_producto)
-
+        # Search by estado
         q_estado = req.params.get('estado', None)
         if q_estado:
+            # Check param is digit
             if not q_estado.isdigit():
-                raise falcon.HTTPBadRequest("Wrong product code", "state must be an integer")
+                raise falcon.HTTPBadRequest("Wrong estado code", "estado must be an integer")
             q_estado = int(q_estado)
 
-            # Add filter
-            filters.append(models_stats.MasterPlopAll.estado == q_estado)
+            filters.append(models_api.Licitacion.estado == q_estado)
 
-        q_fecha_creacion = req.params.get('fecha_creacion', None)
-        if q_fecha_creacion:
-            q_fecha_creacion = q_fecha_creacion.split('|')
-            try:
-                fecha_creacion_min = dateutil.parser.parse(q_fecha_creacion[0], dayfirst=True, yearfirst=True) if q_fecha_creacion[0] else None
-                fecha_creacion_max = dateutil.parser.parse(q_fecha_creacion[1], dayfirst=True, yearfirst=True) if q_fecha_creacion[1] else None
-            except IndexError:
-                raise falcon.HTTPBadRequest("Wrong creation date", "dates must be separated by a pipe [|]")
-            except ValueError:
-                raise falcon.HTTPBadRequest("Wrong creation date", "must be a datetime in ISO8601 format")
-
-            if fecha_creacion_min:
-                filters.append(models_stats.MasterPlopAll.fecha_creacion >= fecha_creacion_min)
-            if fecha_creacion_max:
-                filters.append(models_stats.MasterPlopAll.fecha_creacion <= fecha_creacion_max)
-
-        q_fecha_publicacion = req.params.get('fecha_publicacion', None)
-        if q_fecha_publicacion:
-            q_fecha_publicacion = q_fecha_publicacion.split('|')
-            try:
-                fecha_publicacion_min = dateutil.parser.parse(q_fecha_publicacion[0], dayfirst=True, yearfirst=True) if q_fecha_publicacion[0] else None
-                fecha_publicacion_max = dateutil.parser.parse(q_fecha_publicacion[1], dayfirst=True, yearfirst=True) if q_fecha_publicacion[1] else None
-            except IndexError:
-                raise falcon.HTTPBadRequest("Wrong creation date", "dates must be separated by a pipe [|]")
-            except ValueError:
-                raise falcon.HTTPBadRequest("Wrong creation date", "must be a datetime in ISO8601 format")
-
-            if fecha_publicacion_min:
-                filters.append(models_stats.MasterPlopAll.fecha_publicacion >= fecha_publicacion_min)
-            if fecha_publicacion_max:
-                filters.append(models_stats.MasterPlopAll.fecha_publicacion <= fecha_publicacion_max)
-
-        q_fecha_adjudicacion = req.params.get('fecha_adjudicacion', None)
-        if q_fecha_adjudicacion:
-            q_fecha_adjudicacion = q_fecha_adjudicacion.split('|')
-            try:
-                fecha_adjudicacion_min = dateutil.parser.parse(q_fecha_adjudicacion[0], dayfirst=True, yearfirst=True) if q_fecha_adjudicacion[0] else None
-                fecha_adjudicacion_max = dateutil.parser.parse(q_fecha_adjudicacion[1], dayfirst=True, yearfirst=True) if q_fecha_adjudicacion[1] else None
-            except IndexError:
-                raise falcon.HTTPBadRequest("Wrong creation date", "dates must be separated by a pipe [|]")
-            except ValueError:
-                raise falcon.HTTPBadRequest("Wrong creation date", "must be a datetime in ISO8601 format")
-
-            if fecha_adjudicacion_min:
-                filters.append(models_stats.MasterPlopAll.fecha_adjudicacion >= fecha_adjudicacion_min)
-            if fecha_adjudicacion_max:
-                filters.append(models_stats.MasterPlopAll.fecha_adjudicacion <= fecha_adjudicacion_max)
-
+        # Search by monto
         q_monto = req.params.get('monto', None)
         if q_monto:
             q_monto = q_monto.split('|')
@@ -196,14 +135,66 @@ class LicitacionList(object):
                 monto_min = int(q_monto[0]) if q_monto[0] else None
                 monto_max = int(q_monto[1]) if q_monto[1] else None
             except IndexError:
-                raise falcon.HTTPBadRequest("Wrong amount", "amounts must be separated by a pipe [|]")
+                raise falcon.HTTPBadRequest("Wrong monto", "montos must be separated by a pipe [|]")
             except ValueError:
-                raise falcon.HTTPBadRequest("Wrong amount", "amounts must be integers")
+                raise falcon.HTTPBadRequest("Wrong monto", "montos must be integers")
 
             if monto_min:
-                filters.append(SQL('monto') >= monto_min)
+                filters.append(models_api.Licitacion.monto_total >= monto_min)
             if monto_max:
-                filters.append(SQL('monto') <= monto_max)
+                filters.append(models_api.Licitacion.monto_total <= monto_max)
+
+        # Search by fecha_publicacion
+        q_fecha_publicacion = req.params.get('fecha_publicacion', None)
+        if q_fecha_publicacion:
+            q_fecha_publicacion = q_fecha_publicacion.split('|')
+            try:
+                fecha_publicacion_min = dateutil.parser.parse(q_fecha_publicacion[0], dayfirst=True, yearfirst=True) if q_fecha_publicacion[0] else None
+                fecha_publicacion_max = dateutil.parser.parse(q_fecha_publicacion[1], dayfirst=True, yearfirst=True) if q_fecha_publicacion[1] else None
+            except IndexError:
+                raise falcon.HTTPBadRequest("Wrong fecha_publicacion", "Dates must be separated by a pipe [|]")
+            except ValueError:
+                raise falcon.HTTPBadRequest("Wrong fecha_publicacion", "Date must be a datetime in ISO8601 format")
+
+            if fecha_publicacion_min:
+                filters.append(models_api.Licitacion.fecha_publicacion >= fecha_publicacion_min)
+            if fecha_publicacion_max:
+                filters.append(models_api.Licitacion.fecha_publicacion <= fecha_publicacion_max)
+
+        # Search by fecha_cierre
+        q_fecha_cierre = req.params.get('fecha_cierre', None)
+        if q_fecha_cierre:
+            q_fecha_cierre = q_fecha_cierre.split('|')
+            try:
+                fecha_cierre_min = dateutil.parser.parse(q_fecha_cierre[0], dayfirst=True, yearfirst=True) if q_fecha_cierre[0] else None
+                fecha_cierre_max = dateutil.parser.parse(q_fecha_cierre[1], dayfirst=True, yearfirst=True) if q_fecha_cierre[1] else None
+            except IndexError:
+                raise falcon.HTTPBadRequest("Wrong fecha_cierre", "Dates must be separated by a pipe [|]")
+            except ValueError:
+                raise falcon.HTTPBadRequest("Wrong fecha_cierre", "Dates must be a datetime in ISO8601 format")
+
+            if fecha_cierre_min:
+                filters.append(models_api.Licitacion.fecha_cierre >= fecha_cierre_min)
+            if fecha_cierre_max:
+                filters.append(models_api.Licitacion.fecha_cierre <= fecha_cierre_max)
+
+        # Search by fecha_adjudicacion
+        q_fecha_adjudicacion = req.params.get('fecha_adjudicacion', None)
+        if q_fecha_adjudicacion:
+            q_fecha_adjudicacion = q_fecha_adjudicacion.split('|')
+            try:
+                fecha_adjudicacion_min = dateutil.parser.parse(q_fecha_adjudicacion[0], dayfirst=True, yearfirst=True) if q_fecha_adjudicacion[0] else None
+                fecha_adjudicacion_max = dateutil.parser.parse(q_fecha_adjudicacion[1], dayfirst=True, yearfirst=True) if q_fecha_adjudicacion[1] else None
+            except IndexError:
+                raise falcon.HTTPBadRequest("Wrong fecha_adjudicacion", "Dates must be separated by a pipe [|]")
+            except ValueError:
+                raise falcon.HTTPBadRequest("Wrong fecha_adjudicacion", "Dates must be a datetime in ISO8601 format")
+
+            if fecha_adjudicacion_min:
+                filters.append(models_api.Licitacion.fecha_adjudicacion >= fecha_adjudicacion_min)
+            if fecha_adjudicacion_max:
+                filters.append(models_api.Licitacion.fecha_adjudicacion <= fecha_adjudicacion_max)
+
 
         if filters:
             licitaciones = licitaciones.where(*filters)
@@ -216,16 +207,39 @@ class LicitacionList(object):
             'n_licitaciones': licitaciones.count(),
             'licitaciones': [
                 {
-                    'id': licitacion['id'],
-                    'codigo': licitacion['codigo'],
-                    'nombre': licitacion['nombre'],
-                    'descripcion': licitacion['descripcion'],
-                    'fecha_creacion': licitacion['fecha_creacion'],
+                    'id': licitacion['id_licitacion'],
+                    'codigo': licitacion['codigo_licitacion'],
+                    'nombre': licitacion['nombre_licitacion'],
+                    'descripcion': licitacion['descripcion_licitacion'],
+
                     'organismo': {
-                        'id': licitacion['organismo_id'],
-                        'nombre': licitacion['organismo_nombre'],
+                        'id': licitacion['id_organismo'],
+
+                        'categoria': licitacion['nombre_ministerio'],
+                        'nombre': licitacion['nombre_organismo'],
                     },
-                    'monto_adjudicado': licitacion['monto']
+
+                    'fecha_publicacion': licitacion['fecha_publicacion'],
+                    'fecha_cierre': licitacion['fecha_cierre'],
+                    'fecha_adjudicacion': licitacion['fecha_adjudicacion'],
+
+                    'estado': licitacion['estado'],
+                    'fecha_cambio_estado': licitacion['fecha_cambio_estado'],
+
+                    'n_items': licitacion['items_totales'],
+
+                    'adjudicacion': {
+                        'n_items': licitacion['items_adjudicados'],
+                        'monto': int(licitacion['monto_total']) if licitacion['monto_total'] else None,
+                        'acta': licitacion['url_acta'],
+                    } if licitacion['url_acta'] else None, # Only if there is an acta
+
+                    'categorias': [
+                        {
+                            'id': licitacion['id_categoria_nivel1'][i],
+                            'nombre': licitacion['categoria_nivel1'][i],
+                        }
+                    for i in range(len(licitacion['id_categoria_nivel1']))]
                 }
                 for licitacion in licitaciones.paginate(q_page, LicitacionList.MAX_RESULTS).dicts()
             ]
