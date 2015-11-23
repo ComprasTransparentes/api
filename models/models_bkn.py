@@ -26,6 +26,7 @@ class Adjudicacion(BaseModel):
     numero = CharField(null=True)
     numero_oferentes = IntegerField(null=True)
     tipo = IntegerField(null=True)
+    acta_url = CharField()
 
     class Meta:
         db_table = 'adjudicacion'

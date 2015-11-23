@@ -140,6 +140,7 @@ fields_from = [
     models_old.Adjudications.numero,
     models_old.Adjudications.numero_oferentes,
     cast(models_old.Adjudications.fecha, 'timestamp'),
+    models_old.Adjudications.url_acta,
 ]
 
 query_from = models_old.Adjudications.select(*fields_from).order_by(models_old.Adjudications.id)
@@ -150,6 +151,7 @@ fields_to = [
     models_bkn.Adjudicacion.numero,
     models_bkn.Adjudicacion.numero_oferentes,
     models_bkn.Adjudicacion.fecha,
+    models_bkn.Adjudicacion.acta_url,
 ]
 
 print "Inserting %d rows..." % query_from.count()

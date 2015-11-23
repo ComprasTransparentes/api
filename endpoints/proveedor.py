@@ -76,8 +76,7 @@ class ProveedorItem(object):
         response['extra'] = {
             'monto_adjudicado': monto_adjudicado,
             'top_licitaciones': [licitacion for licitacion in top_licitaciones.dicts()],
-            'n_licitaciones': licitaciones.count(),
-            'licitaciones': [licitacion for licitacion in licitaciones.paginate(p_licitaciones, 10).dicts()]
+            'n_licitaciones': licitaciones.count()
         }
 
         response = json.dumps(response, cls=JSONEncoderPlus, sort_keys=True)
@@ -87,6 +86,7 @@ class ProveedorItem(object):
             response = "%s(%s)" % (callback, response)
 
         resp.body = response
+
 
 
 class ProveedorEmbed(object):
@@ -171,6 +171,7 @@ class ProveedorLicitacion(object):
         )
 
         p_licitaciones = req.params.get('pagina', None)
+
         if p_licitaciones:
             p_licitaciones = max(int(p_licitaciones) if p_licitaciones.isdigit() else 1, 1)
             licitaciones = licitaciones.paginate(p_licitaciones, 10)

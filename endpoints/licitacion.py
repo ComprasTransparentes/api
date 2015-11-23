@@ -38,6 +38,16 @@ class LicitacionItem(object):
         response = model_to_dict(licitacion, backrefs=True)
         response['comprador']['id'] = response['comprador']['jerarquia_id']
         response['items'] = [model_to_dict(item, exclude=[models_bkn.LicitacionItem.licitacion], backrefs=True) for item in items.paginate(p_items, 10).iterator()]
+
+        monto_adjudicado = 0
+        n_items_adjudicados = 0
+        for item in items:
+            if item.adjudicacion:
+                n_items_adjudicados += 1
+                monto_adjudicado += int((item.adjudicacion.cantidad or 0) * (item.adjudicacion.monto_unitario or 0))
+        response['n_items_adjudicados'] = n_items_adjudicados
+        response['monto_adjudicado'] = monto_adjudicado
+
         response['n_items'] = items.count()
         response = json.dumps(response, cls=JSONEncoderPlus, sort_keys=True)
 
@@ -85,7 +95,7 @@ class LicitacionList(object):
 
     MAX_RESULTS = 10
 
-    @models_bkn.database.atomic()
+    @models_stats.database.atomic()
     def on_get(self, req, resp):
 
         # Get all licitaciones
@@ -113,7 +123,6 @@ class LicitacionList(object):
         q_q = req.params.get('q', None)
         if q_q:
             # TODO Try to make just one query over one index instead of two or more ORed queries
-
             filters.append(ts_match(models_stats.MasterPlopAll.licitacion_nombre, q_q) | ts_match(models_stats.MasterPlopAll.licitacion_descripcion, q_q))
 
         q_producto = req.params.get('producto', None)
