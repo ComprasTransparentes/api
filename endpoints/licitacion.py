@@ -177,7 +177,7 @@ class LicitacionList(object):
     categoria_producto
     """
 
-    @models_bkn.database.atomic()
+    @models_api.database.atomic()
     def on_get(self, req, resp):
 
         # Get all licitaciones
@@ -189,7 +189,6 @@ class LicitacionList(object):
         q_q = req.params.get('q', None)
         if q_q:
             # TODO Try to make just one query over one index instead of two or more ORed queries
-
             filters.append(ts_match(models_api.Licitacion.nombre_licitacion, q_q) | ts_match(models_api.Licitacion.descripcion_licitacion, q_q))
 
         # Search by categoria_producto
