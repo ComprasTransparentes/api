@@ -16,7 +16,7 @@ from utils.mypeewee import ts_match, ts_rank
 
 class LicitacionItem(object):
 
-    @models_bkn.database.atomic()
+    @models_api.database.atomic()
     def on_get(self, req, resp, licitacion_id=None):
 
         p_items = req.params.get('p_items', '1')
@@ -175,6 +175,11 @@ class LicitacionList(object):
     """
     q
     categoria_producto
+    estado
+    monto
+    fecha_publicacion
+    fecha_cierre
+    fecha_adjudicacion
     """
 
     @models_api.database.atomic()
@@ -338,3 +343,27 @@ class LicitacionList(object):
         }
 
         resp.body = json.dumps(response, cls=JSONEncoderPlus, sort_keys=True)
+
+
+class LicitacionCategoria(object):
+
+    MAX_RESULTS = 10
+
+    @models_api.database.atomic()
+    def on_get(self, req, resp):
+
+        categorias = models_api.Catnivel1.select().where(
+            models_api.Catnivel1.categoria_nivel1 != None
+        )
+
+        response = {
+            'categorias': [
+                {
+                    'id': categoria['id_categoria_nivel1'],
+                    'nombre': categoria['categoria_nivel1']
+                }
+            for categoria in categorias.dicts().iterator()]
+        }
+
+        resp.body = json.dumps(response, cls=JSONEncoderPlus, sort_keys=True)
+

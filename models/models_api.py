@@ -20,13 +20,17 @@ class UnknownField(object):
     pass
 
 
-class BaseModel(Model):
+class BaseModelPublic(Model):
+    class Meta:
+        database = database
+
+class BaseModelAPI(Model):
     class Meta:
         database = database
         schema = db_schema_api
 
 
-class Licitacion(BaseModel):
+class Licitacion(BaseModelAPI):
     cargo_usuario_organismo = CharField(null=True)
     categoria_nivel1 = ArrayField(null=True)
     categoria_nivel3 = ArrayField(null=True)
@@ -71,7 +75,7 @@ class Licitacion(BaseModel):
         db_table = 'licitacion_id'
 
 
-class LicitacionIdItem(BaseModel):
+class LicitacionIdItem(BaseModelAPI):
     cantidad = FloatField(null=True)
     cantidad_adjudicada = CharField(null=True)
     categoria_global = CharField(null=True)
@@ -94,7 +98,7 @@ class LicitacionIdItem(BaseModel):
         db_table = 'licitacion_id_item'
         primary_key = False
 
-class OrganismoStats(BaseModel):
+class OrganismoStats(BaseModelAPI):
     id_organismo = PrimaryKeyField()
     licitaciones_adjudicadas = BigIntegerField(null=True)
     licitaciones_publicadas = BigIntegerField(null=True)
@@ -107,7 +111,7 @@ class OrganismoStats(BaseModel):
         db_table = 'organismo_stats'
         schema = 'api'
 
-class ProveedorOrganismoCruce(BaseModel):
+class ProveedorOrganismoCruce(BaseModelAPI):
     codigo_organismo_cc = IntegerField(null=True)
     empresa = IntegerField(db_column='empresa_id', null=True)
     fecha_adjudicacion = CharField(null=True)
@@ -125,7 +129,7 @@ class ProveedorOrganismoCruce(BaseModel):
         db_table = 'proveedor_organismo_cruce'
 
 
-class ProveedorStats(BaseModel):
+class ProveedorStats(BaseModelAPI):
     empresa = IntegerField(db_column='empresa_id', null=True)
     licitaciones_adjudicadas = BigIntegerField(null=True)
     monto_adjudicado = DecimalField(null=True)
@@ -135,3 +139,7 @@ class ProveedorStats(BaseModel):
     class Meta:
         db_table = 'proveedor_stats'
 
+
+class Catnivel1(BaseModelPublic):
+    id_categoria_nivel1 = PrimaryKeyField()
+    categoria_nivel1 = CharField()
