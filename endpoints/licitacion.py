@@ -206,11 +206,18 @@ class LicitacionList(object):
         q_estado = req.params.get('estado', None)
         if q_estado:
             # Check param is digit
-            if not q_estado.isdigit():
-                raise falcon.HTTPBadRequest("Wrong estado code", "estado must be an integer")
-            q_estado = int(q_estado)
-
-            filters.append(models_api.Licitacion.estado == q_estado)
+            if isinstance(q_estado, basestring):
+                try:
+                    q_estado = int(q_estado)
+                except ValueError:
+                    raise falcon.HTTPBadRequest("Wrong estado code", "estado must be an integer or a list of integers")
+                filters.append(models_api.Licitacion.estado == q_estado)
+            elif isinstance(q_estado, list):
+                try:
+                    q_estado = map(lambda x: int(x), q_estado)
+                except ValueError:
+                    raise falcon.HTTPBadRequest("Wrong estado code", "estado must be an integer or a list of integers")
+                filters.append(models_api.Licitacion.estado << q_estado)
 
         # Search by monto
         q_monto = req.params.get('monto', None)
