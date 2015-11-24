@@ -1,3 +1,4 @@
+import operator
 import json
 
 import falcon
@@ -185,63 +186,71 @@ class LicitacionList(object):
     @models_api.database.atomic()
     def on_get(self, req, resp):
 
-        # Get all licitaciones
+        # Obtener todas las licitacion
         licitaciones = models_api.Licitacion.select()
 
         filters = []
 
-        # Search by text
+        # Busqueda de texto
         q_q = req.params.get('q', None)
         if q_q:
             # TODO Try to make just one query over one index instead of two or more ORed queries
             filters.append(ts_match(models_api.Licitacion.nombre_licitacion, q_q) | ts_match(models_api.Licitacion.descripcion_licitacion, q_q))
 
-        # Search by categoria_producto
-        # TODO Support multiple params of the same type
+        # Busqueda por categoria de producto
         q_categoria_producto = req.params.get('categoria_producto', None)
         if q_categoria_producto:
-            # Check param is digit
-            if not q_categoria_producto.isdigit():
-                raise falcon.HTTPBadRequest("Wrong categoria_producto code", "categoria_producto must be an integer")
-            q_producto = int(q_categoria_producto)
+            if isinstance(q_categoria_producto, basestring):
+                q_categoria_producto = [q_categoria_producto]
 
-            filters.append(models_api.Licitacion.id_categoria_nivel1.contains(q_categoria_producto))
+            try:
+                q_estado = map(lambda x: int(x), q_categoria_producto)
+            except ValueError:
+                raise falcon.HTTPBadRequest("Parametro incorrecto", "categoria_producto debe ser un entero")
 
-        # Search by estado
+            filters.append(models_api.Licitacion.id_categoria_nivel1.contains_any(q_categoria_producto))
+
+        # Busqueda por estado
         q_estado = req.params.get('estado', None)
         if q_estado:
-            # Check param is digit
             if isinstance(q_estado, basestring):
-                try:
-                    q_estado = int(q_estado)
-                except ValueError:
-                    raise falcon.HTTPBadRequest("Wrong estado code", "estado must be an integer or a list of integers")
-                filters.append(models_api.Licitacion.estado == q_estado)
-            elif isinstance(q_estado, list):
-                try:
-                    q_estado = map(lambda x: int(x), q_estado)
-                except ValueError:
-                    raise falcon.HTTPBadRequest("Wrong estado code", "estado must be an integer or a list of integers")
-                filters.append(models_api.Licitacion.estado << q_estado)
+                q_estado = [q_estado]
 
-        # Search by monto
+            try:
+                q_estado = map(lambda x: int(x), q_estado)
+            except ValueError:
+                raise falcon.HTTPBadRequest("Parametro incorrecto", "estado debe ser un entero")
+
+            filters.append(models_api.Licitacion.estado << q_estado)
+
+        # Busqueda por monto
         q_monto = req.params.get('monto', None)
         if q_monto:
-            q_monto = q_monto.split('|')
-            try:
-                monto_min = int(q_monto[0]) if q_monto[0] else None
-                monto_max = int(q_monto[1]) if q_monto[1] else None
-            except IndexError:
-                raise falcon.HTTPBadRequest("Wrong monto", "montos must be separated by a pipe [|]")
-            except ValueError:
-                raise falcon.HTTPBadRequest("Wrong monto", "montos must be integers")
+            if isinstance(q_monto, basestring):
+                q_monto = [q_monto]
 
-            if monto_min:
-                filters.append(models_api.Licitacion.monto_total >= monto_min)
-            if monto_max:
-                filters.append(models_api.Licitacion.monto_total <= monto_max)
+            filter_monto = []
+            for montos in q_monto:
+                montos = montos.split('|')
+                try:
+                    monto_min = int(montos[0]) if montos[0] else None
+                    monto_max = int(montos[1]) if montos[1] else None
+                except IndexError:
+                    raise falcon.HTTPBadRequest("Parametro incorrecto", "Los valores en monto deben estar separados por un pipe [|]")
+                except ValueError:
+                    raise falcon.HTTPBadRequest("Parametro incorrecto", "Los valores en monto deben ser enteros")
 
-        # Search by fecha_publicacion
+                if monto_min and monto_max:
+                    filter_monto.append((models_api.Licitacion.monto_total >= monto_min) & (models_api.Licitacion.monto_total <= monto_max))
+                elif monto_min:
+                    filter_monto.append(models_api.Licitacion.monto_total >= monto_min)
+                elif monto_max:
+                    filter_monto.append(models_api.Licitacion.monto_total <= monto_max)
+
+            if filter_monto:
+                filters.append(reduce(operator.or_, filter_monto))
+
+        # Busqueda por fecha de publicacion
         q_fecha_publicacion = req.params.get('fecha_publicacion', None)
         if q_fecha_publicacion:
             q_fecha_publicacion = q_fecha_publicacion.split('|')
@@ -291,7 +300,6 @@ class LicitacionList(object):
                 filters.append(models_api.Licitacion.fecha_adjudicacion >= fecha_adjudicacion_min)
             if fecha_adjudicacion_max:
                 filters.append(models_api.Licitacion.fecha_adjudicacion <= fecha_adjudicacion_max)
-
 
         if filters:
             licitaciones = licitaciones.where(*filters)
