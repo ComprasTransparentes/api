@@ -139,6 +139,31 @@ class ProveedorStats(BaseModelAPI):
         db_table = 'proveedor_stats'
 
 
+class Comparador(BaseModelAPI):
+    categoria_nivel1 = CharField(null=True)
+    id_categoria_nivel1 = IntegerField(null=True)
+    id_ministerio = IntegerField(null=True)
+    licit_adjudicadas = BigIntegerField(null=True)
+    monto = DecimalField(null=True)
+    monto_promedio = DecimalField(null=True)
+    nombre_ministerio = CharField(null=True)
+    proveed_favorecidos = BigIntegerField(null=True)
+
+    class Meta:
+        db_table = 'comparador'
+        primary_key = False
+
+
 class Catnivel1(BaseModelPublic):
     id_categoria_nivel1 = PrimaryKeyField()
     categoria_nivel1 = CharField()
+
+    class Meta:
+        db_table = 'catnivel1'
+
+class Catnivel3(BaseModelPublic):
+    id_categoria_nivel3 = PrimaryKeyField()
+    categoria_nivel3 = CharField()
+
+    class Meta:
+        db_table = 'catnivel3'

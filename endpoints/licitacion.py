@@ -379,27 +379,3 @@ class LicitacionIdItem(object):
             response = "%s(%s)" % (callback, response)
 
         resp.body = response
-
-
-class LicitacionCategoria(object):
-
-    MAX_RESULTS = 10
-
-    @models_api.database.atomic()
-    def on_get(self, req, resp):
-
-        categorias = models_api.Catnivel1.select().where(
-            models_api.Catnivel1.categoria_nivel1 != None
-        )
-
-        response = {
-            'categorias': [
-                {
-                    'id': categoria['id_categoria_nivel1'],
-                    'nombre': categoria['categoria_nivel1']
-                }
-            for categoria in categorias.dicts().iterator()]
-        }
-
-        resp.body = json.dumps(response, cls=JSONEncoderPlus, sort_keys=True)
-

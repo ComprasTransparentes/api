@@ -1,5 +1,4 @@
 import operator
-import copy
 import json
 
 import falcon
@@ -259,7 +258,6 @@ class Organismo(object):
 
         if filtros:
 
-            req.params.clear()
             for index, filtro in enumerate(filtros):
 
                 if index > 0:
