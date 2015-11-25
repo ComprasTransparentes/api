@@ -1,4 +1,5 @@
 import operator
+import copy
 import json
 
 import falcon
@@ -42,6 +43,7 @@ class Organismo(object):
 
     """
     q
+    organismo
     fecha_adjudicacion
     proveedor_adjudicado
     n_licitaciones_adjudicadas  (group by)
@@ -67,6 +69,19 @@ class Organismo(object):
         if q_q:
             # TODO Try to make just one query over one index instead of two or more ORed queries
             filters.append(ts_match(models_api.ProveedorOrganismoCruce.nombre_ministerio, q_q) | ts_match(models_api.ProveedorOrganismoCruce.nombre_organismo, q_q))
+
+        q_organismo = req.params.get('organismo', None)
+        if q_organismo:
+            if isinstance(q_organismo, basestring):
+                q_organismo = [q_organismo]
+
+            try:
+                q_organismo = map(lambda x: int(x), q_organismo)
+            except ValueError:
+                raise falcon.HTTPBadRequest("Parametro incorrecto", "organismo debe ser un entero")
+
+            filters.append(models_api.ProveedorOrganismoCruce.organismo << q_organismo)
+
 
         # Busqueda por fecha de adjudicacion
         q_fecha_adjudicacion = req.params.get('fecha_adjudicacion', None)
@@ -235,6 +250,37 @@ class Organismo(object):
         }
 
         resp.body = json.dumps(response, cls=JSONEncoderPlus, sort_keys=True)
+
+
+    @models_api.database.atomic()
+    def on_post(self, req, resp):
+
+        filtros = req.context['payload'].get('filtros', [])
+
+        if filtros:
+
+            new_req = copy.copy(req)
+            for index, filtro in enumerate(filtros):
+
+                if index > 0:
+                    pre_organismos = [organismo['id'] for organismo in json.loads(resp.body)['organismos']]
+                    if not pre_organismos:
+                        break
+                    else:
+                        new_req.params['organismo'] = pre_organismos
+
+                # for k, v in filtro.iteritems():
+                #     if isinstance(v, int):
+                #         filtro[k] = str(v)
+                #     elif isinstance(v, list):
+                #         filtro[k] = [str(vv) for vv in v]
+
+                new_req.params.update(filtro)
+
+                self.on_get(new_req, resp)
+
+        else:
+            raise falcon.HTTPBadRequest("Parametros incorrectos", "El atributo filtros no esta presente")
 
 
 class OrganismoEmbed(object):

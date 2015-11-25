@@ -100,64 +100,6 @@ class LicitacionId(object):
         resp.body = response
 
 
-class LicitacionIdItem(object):
-
-    @models_api.database.atomic()
-    def on_get(self, req, resp, licitacion_id):
-
-        # Get the licitacion
-        try:
-            if licitacion_id.isdigit():
-                licitacion_id = int(licitacion_id)
-                items = models_api.LicitacionIdItem.select().filter(models_api.LicitacionIdItem.licitacion == licitacion_id)
-            else:
-                raise models_api.LicitacionIdItem.DoesNotExist()
-        except models_api.Licitacion.DoesNotExist:
-            raise falcon.HTTPNotFound()
-
-        print items.sql()
-
-        response = {
-            'n_items': items.count(),
-            'items': [
-                {
-                    'adjudicacion': {
-                        'cantidad': float(item['cantidad_adjudicada']),
-                        'monto_unitario': int(item['monto_pesos_adjudicado']) if item['monto_pesos_adjudicado'] else None,
-                        'monto_total': int(item['monto_total']) if item['monto_total'] else None,
-
-                        'fecha': item['fecha_adjudicacion'],
-
-                        'proveedor': {
-                            'id': item['id_empresa'],
-                            'nombre': item['nombre_empresa'],
-                            'rut': item['rut_sucursal']
-                        }
-                    } if item['id_empresa'] else None,
-
-                    'codigo_categoria': item['codigo_categoria'],
-                    'nombre_categoria': item['categoria_global'],
-
-                    'codigo_producto': item['codigo_producto'],
-                    'nombre_producto': item['nombre_producto'],
-
-                    'descripcion': item['descripcion'],
-
-                    'unidad': item['unidad_medida'],
-                    'cantidad': item['cantidad']
-                }
-            for item in items.dicts().iterator()]
-        }
-
-        response = json.dumps(response, cls=JSONEncoderPlus, sort_keys=True)
-
-        callback = req.params.get('callback', None)
-        if callback:
-            response = "%s(%s)" % (callback, response)
-
-        resp.body = response
-
-
 # TODO Definir orden de resultados
 class Licitacion(object):
 
@@ -365,6 +307,64 @@ class Licitacion(object):
         }
 
         resp.body = json.dumps(response, cls=JSONEncoderPlus, sort_keys=True)
+
+
+class LicitacionIdItem(object):
+
+    @models_api.database.atomic()
+    def on_get(self, req, resp, licitacion_id):
+
+        # Get the licitacion
+        try:
+            if licitacion_id.isdigit():
+                licitacion_id = int(licitacion_id)
+                items = models_api.LicitacionIdItem.select().filter(models_api.LicitacionIdItem.licitacion == licitacion_id)
+            else:
+                raise models_api.LicitacionIdItem.DoesNotExist()
+        except models_api.Licitacion.DoesNotExist:
+            raise falcon.HTTPNotFound()
+
+        print items.sql()
+
+        response = {
+            'n_items': items.count(),
+            'items': [
+                {
+                    'adjudicacion': {
+                        'cantidad': float(item['cantidad_adjudicada']),
+                        'monto_unitario': int(item['monto_pesos_adjudicado']) if item['monto_pesos_adjudicado'] else None,
+                        'monto_total': int(item['monto_total']) if item['monto_total'] else None,
+
+                        'fecha': item['fecha_adjudicacion'],
+
+                        'proveedor': {
+                            'id': item['id_empresa'],
+                            'nombre': item['nombre_empresa'],
+                            'rut': item['rut_sucursal']
+                        }
+                    } if item['id_empresa'] else None,
+
+                    'codigo_categoria': item['codigo_categoria'],
+                    'nombre_categoria': item['categoria_global'],
+
+                    'codigo_producto': item['codigo_producto'],
+                    'nombre_producto': item['nombre_producto'],
+
+                    'descripcion': item['descripcion'],
+
+                    'unidad': item['unidad_medida'],
+                    'cantidad': item['cantidad']
+                }
+            for item in items.dicts().iterator()]
+        }
+
+        response = json.dumps(response, cls=JSONEncoderPlus, sort_keys=True)
+
+        callback = req.params.get('callback', None)
+        if callback:
+            response = "%s(%s)" % (callback, response)
+
+        resp.body = response
 
 
 class LicitacionCategoria(object):

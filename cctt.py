@@ -1,6 +1,7 @@
 import falcon
 
 from middlewares.cors import CorsMiddleware
+from middlewares.payload import PayloadParserMiddleware
 
 from endpoints.licitacion import LicitacionId, LicitacionIdItem, Licitacion, LicitacionCategoria
 from endpoints.ministerio import MinisterioStatsItem
@@ -9,7 +10,7 @@ from endpoints.proveedor import ProveedorId, Proveedor, ProveedorIdLicitacion, P
 from endpoints.stats import StatsItem, StatsTop
 
 # Create the falcon WSGI app
-app = falcon.API(middleware=[CorsMiddleware()])
+app = falcon.API(middleware=[CorsMiddleware(), PayloadParserMiddleware()])
 
 # Add routes
 app.add_route('/licitacion/', Licitacion())
