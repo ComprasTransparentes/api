@@ -41,6 +41,8 @@ class OrganismoId(object):
 
 class Organismo(object):
 
+    MAX_RESULTS = 10
+
     """
     q
     organismo
@@ -49,8 +51,6 @@ class Organismo(object):
     n_licitaciones_adjudicadas  (group by)
     monto_adjudicado            (group by)
     """
-
-    MAX_RESULTS = 10
 
     @models_api.database.atomic()
     def on_get(self, req, resp):
@@ -259,7 +259,7 @@ class Organismo(object):
 
         if filtros:
 
-            new_req = copy.copy(req)
+            req.params.clear()
             for index, filtro in enumerate(filtros):
 
                 if index > 0:
@@ -267,7 +267,7 @@ class Organismo(object):
                     if not pre_organismos:
                         break
                     else:
-                        new_req.params['organismo'] = pre_organismos
+                        req.params['organismo'] = pre_organismos
 
                 # for k, v in filtro.iteritems():
                 #     if isinstance(v, int):
@@ -275,9 +275,9 @@ class Organismo(object):
                 #     elif isinstance(v, list):
                 #         filtro[k] = [str(vv) for vv in v]
 
-                new_req.params.update(filtro)
+                req.params.update(filtro)
 
-                self.on_get(new_req, resp)
+                self.on_get(req, resp)
 
         else:
             raise falcon.HTTPBadRequest("Parametros incorrectos", "El atributo filtros no esta presente")

@@ -108,6 +108,7 @@ class Licitacion(object):
     """
     q
     categoria_producto
+    producto
     estado
     monto
     fecha_publicacion
@@ -136,11 +137,24 @@ class Licitacion(object):
                 q_categoria_producto = [q_categoria_producto]
 
             try:
-                q_estado = map(lambda x: int(x), q_categoria_producto)
+                q_categoria_producto = map(lambda x: int(x), q_categoria_producto)
             except ValueError:
                 raise falcon.HTTPBadRequest("Parametro incorrecto", "categoria_producto debe ser un entero")
 
             filters.append(models_api.Licitacion.id_categoria_nivel1.contains_any(q_categoria_producto))
+
+        # Busqueda por  producto
+        q_producto = req.params.get('producto', None)
+        if q_producto:
+            if isinstance(q_producto, basestring):
+                q_producto = [q_producto]
+
+            try:
+                q_producto = map(lambda x: int(x), q_producto)
+            except ValueError:
+                raise falcon.HTTPBadRequest("Parametro incorrecto", "producto debe ser un entero")
+
+            filters.append(models_api.Licitacion.id_categoria_nivel3.contains_any(q_producto))
 
         # Busqueda por estado
         q_estado = req.params.get('estado', None)
