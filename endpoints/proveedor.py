@@ -223,7 +223,7 @@ class Proveedor(object):
 
                 proveedores_ids = [proveedor_monto['empresa'] for proveedor_monto in proveedores_montos.dicts().iterator()]
 
-                filters.append(models_api.ProveedorOrganismoCruce.empresa << proveedores_ids if proveedores_ids else False)
+                filters.append(models_api.ProveedorOrganismoCruce.empresa << proveedores_ids if proveedores_ids else peewee.SQL('FALSE'))
 
         if filters:
             proveedores = proveedores.where(*filters)
@@ -248,6 +248,7 @@ class Proveedor(object):
         }
 
         resp.body = json.dumps(response, cls=JSONEncoderPlus, sort_keys=True)
+
 
     @models_api.database.atomic()
     def on_post(self, req, resp):
@@ -276,7 +277,7 @@ class Proveedor(object):
                 self.on_get(req, resp)
 
         else:
-            raise falcon.HTTPBadRequest("Parametros incorrectos", "El atributo filtros no esta presente")
+            self.on_get(req, resp)
 
 
 class ProveedorEmbed(object):

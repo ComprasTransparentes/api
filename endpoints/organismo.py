@@ -49,6 +49,8 @@ class Organismo(object):
     proveedor_adjudicado
     n_licitaciones_adjudicadas  (group by)
     monto_adjudicado            (group by)
+
+    orden
     """
 
     @models_api.database.atomic()
@@ -224,11 +226,11 @@ class Organismo(object):
 
                 organismos_ids = [organismo_monto['organismo'] for organismo_monto in organismos_montos.dicts().iterator()]
 
-                filters.append(models_api.ProveedorOrganismoCruce.organismo << organismos_ids if organismos_ids else False)
+                filters.append(models_api.ProveedorOrganismoCruce.organismo << organismos_ids if organismos_ids else peewee.SQL('FALSE'))
 
         if filters:
             organismos = organismos.where(*filters)
-
+            
         organismos = organismos.distinct()
 
         # Get page
@@ -278,7 +280,7 @@ class Organismo(object):
                 self.on_get(req, resp)
 
         else:
-            raise falcon.HTTPBadRequest("Parametros incorrectos", "El atributo filtros no esta presente")
+            self.on_get(req, resp)
 
 
 class OrganismoEmbed(object):
