@@ -109,7 +109,6 @@ class OrganismoStats(BaseModelAPI):
 
     class Meta:
         db_table = 'organismo_stats'
-        schema = 'api'
 
 class ProveedorOrganismoCruce(BaseModelAPI):
     codigo_organismo_cc = IntegerField(null=True)
@@ -130,7 +129,7 @@ class ProveedorOrganismoCruce(BaseModelAPI):
 
 
 class ProveedorStats(BaseModelAPI):
-    empresa = IntegerField(db_column='empresa_id', null=True)
+    empresa = PrimaryKeyField(db_column='empresa_id', null=True)
     licitaciones_adjudicadas = BigIntegerField(null=True)
     monto_adjudicado = DecimalField(null=True)
     nombre_empresa = CharField(null=True)

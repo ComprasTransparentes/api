@@ -1,29 +1,20 @@
-import operator
 import json
+import operator
 
-import falcon
-import peewee
 import dateutil.parser
+import falcon
 
-from peewee import fn, SQL
-from playhouse.shortcuts import model_to_dict
-
-from models import models_bkn
-from models import models_stats
 from models import models_api
 from utils.myjson import JSONEncoderPlus
-from utils.mypeewee import ts_match, ts_rank
+from utils.mypeewee import ts_match
 
 
-class LicitacionItem(object):
+class LicitacionId(object):
 
     @models_api.database.atomic()
     def on_get(self, req, resp, licitacion_id=None):
 
-        p_items = req.params.get('p_items', '1')
-        p_items = max(int(p_items) if p_items.isdigit() else 1, 1)
-
-        # Get the licitacion
+        # Obtener la licitacion
         try:
             if '-' in licitacion_id:
                 licitacion = models_api.Licitacion.get(models_api.Licitacion.codigo_licitacion == licitacion_id)
@@ -34,72 +25,70 @@ class LicitacionItem(object):
                 raise models_api.Licitacion.DoesNotExist()
         except models_api.Licitacion.DoesNotExist:
             raise falcon.HTTPNotFound()
-        finally:
-            licitacion = model_to_dict(licitacion)
 
         response = {
-            'id': licitacion['id_licitacion'],
-            'codigo': licitacion['codigo_licitacion'],
+            'id': licitacion.id_licitacion,
+            'codigo': licitacion.codigo_licitacion,
 
-            'nombre': licitacion['nombre_licitacion'],
-            'descripcion': licitacion['descripcion_licitacion'],
+            'nombre': licitacion.nombre_licitacion,
+            'descripcion': licitacion.descripcion_licitacion,
 
             'organismo': {
-                'id': licitacion['id_organismo'],
+                'id': licitacion.id_organismo,
 
-                'categoria': licitacion['nombre_ministerio'],
-                'nombre': licitacion['nombre_organismo']
+                'categoria': licitacion.nombre_ministerio,
+                'nombre': licitacion.nombre_organismo
             },
 
             'unidad': {
-                'nombre': licitacion['nombre_unidad'],
-                'rut': licitacion['rut_unidad'],
-                'region': licitacion['region_unidad'],
-                'comuna': licitacion['comuna_unidad'],
-                'direccion': licitacion['direccion_unidad']
+                'nombre': licitacion.nombre_unidad,
+                'rut': licitacion.rut_unidad,
+                'region': licitacion.region_unidad,
+                'comuna': licitacion.comuna_unidad,
+                'direccion': licitacion.direccion_unidad
             },
 
             'usuario': {
-                'cargo': licitacion['cargo_usuario_organismo'],
-                'nombre': licitacion['nombre_usuario_organismo'],
-                'rut': licitacion['rut_usuario_organismo']
+                'cargo': licitacion.cargo_usuario_organismo,
+                'nombre': licitacion.nombre_usuario_organismo,
+                'rut': licitacion.rut_usuario_organismo
             },
 
             'responsable_contrato': {
-                'nombre': licitacion['nombre_responsable_contrato'],
-                'telefono': licitacion['fono_responsable_contrato'],
-                'email': licitacion['email_responsable_contrato']
+                'nombre': licitacion.nombre_responsable_contrato,
+                'telefono': licitacion.fono_responsable_contrato,
+                'email': licitacion.email_responsable_contrato
             },
 
             'responsable_pago': {
-                'nombre': licitacion['nombre_responsable_pago'],
-                'email': licitacion['email_responsable_pago']
+                'nombre': licitacion.nombre_responsable_pago,
+                'email': licitacion.email_responsable_pago
             },
 
-            'estado': licitacion['estado'],
-            'fecha_cabio_estado': licitacion['fecha_cambio_estado'],
+            'estado': licitacion.estado,
+            'fecha_cabio_estado': licitacion.fecha_cambio_estado,
 
-            'fecha_creacion': licitacion['fecha_creacion'],
-            'fecha_publicacion': licitacion['fecha_publicacion'],
-            'fecha_inicio': licitacion['fecha_inicio'],
-            'fecha_final': licitacion['fecha_final'],
-            'fecha_cierre': licitacion['fecha_cierre'],
-            'fecha_estimada_adjudicacion': licitacion['fecha_estimada_adjudicacion'],
+            'fecha_creacion': licitacion.fecha_creacion,
+            'fecha_publicacion': licitacion.fecha_publicacion,
+            'fecha_inicio': licitacion.fecha_inicio,
+            'fecha_final': licitacion.fecha_final,
+            'fecha_cierre': licitacion.fecha_cierre,
+            'fecha_estimada_adjudicacion': licitacion.fecha_estimada_adjudicacion,
 
-            'n_items': licitacion['items_totales'],
+            'n_items': licitacion.items_totales,
 
             'adjudicacion': {
-                'n_items': licitacion['items_adjudicados'],
-                'monto': int(licitacion['monto_total']) if licitacion['monto_total'] else None,
-                'acta': licitacion['url_acta'],
-            } if licitacion['url_acta'] else None, # Only if there is an acta
+                'n_items': licitacion.items_adjudicados,
+                'monto': int(licitacion.monto_total) if licitacion.monto_total else None,
+                'acta': licitacion.url_acta,
+            } if licitacion.url_acta else None, # Only if there is an acta
 
             'categorias': [
                 {
-                    'id': licitacion['id_categoria_nivel1'][i],
-                    'nombre': licitacion['categoria_nivel1'][i],
+                    'id': licitacion.id_categoria_nivel1[i],
+                    'nombre': licitacion.categoria_nivel1[i],
                 }
-            for i in range(len(licitacion['id_categoria_nivel1']))]
+            for i in range(len(licitacion.id_categoria_nivel1))]
         }
 
         response = json.dumps(response, cls=JSONEncoderPlus, sort_keys=True)
@@ -111,9 +100,9 @@ class LicitacionItem(object):
         resp.body = response
 
 
-class LicitacionItemItem(object):
+class LicitacionIdItem(object):
 
-    @models_bkn.database.atomic()
+    @models_api.database.atomic()
     def on_get(self, req, resp, licitacion_id):
 
         # Get the licitacion
@@ -123,7 +112,7 @@ class LicitacionItemItem(object):
                 items = models_api.LicitacionIdItem.select().filter(models_api.LicitacionIdItem.licitacion == licitacion_id)
             else:
                 raise models_api.LicitacionIdItem.DoesNotExist()
-        except models_bkn.Licitacion.DoesNotExist:
+        except models_api.Licitacion.DoesNotExist:
             raise falcon.HTTPNotFound()
 
         print items.sql()
@@ -157,7 +146,7 @@ class LicitacionItemItem(object):
                     'unidad': item['unidad_medida'],
                     'cantidad': item['cantidad']
                 }
-            for item in items.dicts()]
+            for item in items.dicts().iterator()]
         }
 
         response = json.dumps(response, cls=JSONEncoderPlus, sort_keys=True)
@@ -169,7 +158,8 @@ class LicitacionItemItem(object):
         resp.body = response
 
 
-class LicitacionList(object):
+# TODO Definir orden de resultados
+class Licitacion(object):
 
     MAX_RESULTS = 10
 
@@ -334,8 +324,6 @@ class LicitacionList(object):
         if filters:
             licitaciones = licitaciones.where(*filters)
 
-        print licitaciones.sql()[0] % tuple(licitaciones.sql()[1])
-
         # Get page
         q_pagina = req.params.get('pagina', '1')
         q_pagina = max(int(q_pagina) if q_pagina.isdigit() else 1, 1)
@@ -371,14 +359,8 @@ class LicitacionList(object):
                         'acta': licitacion['url_acta'],
                     } if licitacion['url_acta'] else None, # Only if there is an acta
 
-                    'categorias': [
-                        {
-                            'id': licitacion['id_categoria_nivel1'][i],
-                            'nombre': licitacion['categoria_nivel1'][i],
-                        }
-                    for i in range(len(licitacion['id_categoria_nivel1']))]
                 }
-                for licitacion in licitaciones.paginate(q_pagina, LicitacionList.MAX_RESULTS).dicts()
+                for licitacion in licitaciones.paginate(q_pagina, Licitacion.MAX_RESULTS).dicts()
             ]
         }
 

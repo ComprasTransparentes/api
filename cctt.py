@@ -2,33 +2,32 @@ import falcon
 
 from middlewares.cors import CorsMiddleware
 
-from endpoints.licitacion import LicitacionItem, LicitacionItemItem, LicitacionList, LicitacionCategoria
+from endpoints.licitacion import LicitacionId, LicitacionIdItem, Licitacion, LicitacionCategoria
 from endpoints.ministerio import MinisterioStatsItem
-from endpoints.organismo import OrganismoItem, OrganismoList, OrganismoLicitacion, OrganismoEmbed, OrganismoCategoriaList
-from endpoints.proveedor import ProveedorItem, ProveedorList, ProveedorLicitacion, ProveedorEmbed
+from endpoints.organismo import OrganismoId, Organismo, OrganismoIdLicitacion, OrganismoEmbed
+from endpoints.proveedor import ProveedorId, Proveedor, ProveedorIdLicitacion, ProveedorEmbed
 from endpoints.stats import StatsItem, StatsTop
 
 # Create the falcon WSGI app
 app = falcon.API(middleware=[CorsMiddleware()])
 
 # Add routes
-app.add_route('/licitacion/', LicitacionList())
-app.add_route('/licitacion/{licitacion_id}', LicitacionItem())
-app.add_route('/licitacion/{licitacion_id}/item', LicitacionItemItem())
+app.add_route('/licitacion/', Licitacion())
+app.add_route('/licitacion/{licitacion_id}', LicitacionId())
+app.add_route('/licitacion/{licitacion_id}/item', LicitacionIdItem())
 
 app.add_route('/licitacion/categoria', LicitacionCategoria())
 
 app.add_route('/ministerio/{ministerio_id}/categoria/{categoria_id}/stats', MinisterioStatsItem())
 
-app.add_route('/organismo/', OrganismoList())
-app.add_route('/organismo/{organismo_id}', OrganismoItem())
-app.add_route('/organismo/{organismo_id}/licitacion', OrganismoLicitacion())
+app.add_route('/organismo/', Organismo())
+app.add_route('/organismo/{organismo_id}', OrganismoId())
+app.add_route('/organismo/{organismo_id}/licitacion', OrganismoIdLicitacion())
 app.add_route('/organismo/{organismo_id}/embed', OrganismoEmbed())
-app.add_route('/organismo/{organismo_id}/categoria', OrganismoCategoriaList())
 
-app.add_route('/proveedor/', ProveedorList())
-app.add_route('/proveedor/{proveedor_id}', ProveedorItem())
-app.add_route('/proveedor/{proveedor_id}/licitacion', ProveedorLicitacion())
+app.add_route('/proveedor/', Proveedor())
+app.add_route('/proveedor/{proveedor_id}', ProveedorId())
+app.add_route('/proveedor/{proveedor_id}/licitacion', ProveedorIdLicitacion())
 app.add_route('/proveedor/{proveedor_id}/embed', ProveedorEmbed())
 
 app.add_route('/stats/top/{datatype}', StatsTop())

@@ -7,7 +7,6 @@ import unicodecsv as csv
 from playhouse.shortcuts import model_to_dict, cast
 
 from models.models_stats import *
-from models import models as models_old
 from models import models_bkn
 from utils.myjson import JSONEncoderPlus
 
