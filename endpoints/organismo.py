@@ -280,10 +280,14 @@ class Organismo(object):
 
         filtros = req.context['payload'].get('filtros', [])
 
-        if filtros:
+        if not isinstance(filtros, list):
+            raise falcon.HTTPBadRequest("Filtros incorrectos", "El campo filtros no esta presente")
 
-            if len(filtros) > 5:
-                raise falcon.HTTPBadRequest("Filtros incorrectos", "Demasiados filtros. Maximo 5.")
+        if len(filtros) == 0:
+            self.on_get(req, resp)
+        if len(filtros) <= 5:
+            # Eliminar params de pagina. Usarlos solo al final.
+            q_pagina = req.params.pop('pagina', None)
 
             for index, filtro in enumerate(filtros):
 
@@ -300,12 +304,17 @@ class Organismo(object):
                 #     elif isinstance(v, list):
                 #         filtro[k] = [str(vv) for vv in v]
 
+                # Eliminar parametro de pagina enviado en el JSON
+                filtro.pop('pagina', None)
                 req.params.update(filtro)
 
-                self.on_get(req, resp)
+                # Volver a agregar el parametro de pagina en la ultima iteracion
+                if index == (len(filtros) - 1) and q_pagina:
+                    req.params['pagina'] = q_pagina
 
+                self.on_get(req, resp)
         else:
-            self.on_get(req, resp)
+            raise falcon.HTTPBadRequest("Filtros incorrectos", "Demasiados filtros. Maximo 5.")
 
 
 class OrganismoEmbed(object):
