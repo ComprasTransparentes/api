@@ -2,24 +2,24 @@ from io import BytesIO
 import json
 
 import falcon
+import peewee
 import unicodecsv as csv
 
 from playhouse.shortcuts import model_to_dict, cast
 
-from models.models_stats import *
-from models import models as models_old
-from models import models_bkn
+from models import models_api
+from models import models_stats
 from utils.myjson import JSONEncoderPlus
 
 
 class StatsItem(object):
 
-    @database.atomic()
+    @models_stats.database.atomic()
     def on_get(self, req, resp, datatype=None):
 
         if datatype == '0':
 
-            stats = Sumario.select().first()
+            stats = models_stats.Sumario.select().first()
 
             response = model_to_dict(stats)
 
@@ -27,11 +27,11 @@ class StatsItem(object):
 
         elif datatype == '1':
 
-            gasto_organismos = MinisterioOrganismoMonto.select(
-                MinisterioOrganismoMonto.nombre_ministerio.concat('-').concat(MinisterioOrganismoMonto.nombre_organismo).alias('nombre'),
-                cast(MinisterioOrganismoMonto.monto, 'bigint').alias('monto')
+            gasto_organismos = models_stats.MinisterioOrganismoMonto.select(
+                models_stats.MinisterioOrganismoMonto.nombre_ministerio.concat('-').concat(models_stats.MinisterioOrganismoMonto.nombre_organismo).alias('nombre'),
+                cast(models_stats.MinisterioOrganismoMonto.monto, 'bigint').alias('monto')
             ).order_by(
-                SQL('nombre')
+                peewee.SQL('nombre')
             )
 
             output = BytesIO()
@@ -39,8 +39,6 @@ class StatsItem(object):
 
             for go in gasto_organismos.tuples():
                 csvwriter.writerow(go if len(go) == 4 else go+('null', 'null'))
-            # for go in gasto_organismo_region_anos.tuples():
-            #     csvwriter.writerow(go)
 
             resp.content_type = 'text/csv'
             output.seek(0)
@@ -52,60 +50,71 @@ class StatsItem(object):
 
 class StatsTop(object):
 
-    @database.atomic()
+    @models_api.database.atomic()
     def on_get(self, req, resp, datatype=None):
 
         if datatype in ['licitacion', 'licitaciones']:
 
-            top_licitaciones = LicitacionMonto.select(
-                models_bkn.Licitacion.id,
-                models_bkn.Licitacion.codigo,
-                models_bkn.Licitacion.nombre,
-                cast(LicitacionMonto.monto, 'bigint')
-            ).join(
-                models_bkn.Licitacion,
-                on=(LicitacionMonto.licitacion_codigo == models_bkn.Licitacion.codigo)
-            ).order_by(
-                LicitacionMonto.monto.desc()
-            ).limit(5)
+            licitaciones = models_api.LicitacionesCategorias.select().order_by(models_api.LicitacionesCategorias.monto.desc())
 
             response = {
-                'top_licitaciones': [licitacion for licitacion in top_licitaciones.dicts()]
+                'licitaciones': [
+                    {
+                        'id': licitacion['licitacion'],
+                        'codigo': licitacion['codigo_licitacion'],
+                        'nombre': licitacion['nombre_licitacion'],
+                        'monto': int(licitacion['monto'])
+                    }
+                for licitacion in licitaciones.dicts().iterator()]
+            }
+
+            resp.body = json.dumps(response, cls=JSONEncoderPlus)
+
+        elif datatype in ['organismo', 'organismos']:
+
+            organismos = models_api.RankingOrganismos.select().order_by(models_api.RankingOrganismos.monto.desc())
+
+            response = {
+                'organismos': [
+                    {
+                        'id': organismo['organismo'],
+                        'nombre': organismo['nombre_organismo'],
+                        'monto': int(organismo['monto'])
+                    }
+                for organismo in organismos.dicts().iterator()]
             }
 
             resp.body = json.dumps(response, cls=JSONEncoderPlus)
 
         elif datatype in ['proveedor', 'proveedores']:
 
-            top_proveedores = ProveedorMonto.select(
-                models_bkn.Proveedor.id,
-                models_bkn.Proveedor.nombre,
-                models_bkn.Proveedor.rut,
-                cast(ProveedorMonto.monto, 'bigint').alias('monto')
-            ).join(
-                models_bkn.Proveedor,
-                on=(ProveedorMonto.company == models_bkn.Proveedor.id)
-            ).order_by(
-                ProveedorMonto.monto.desc()
-            ).limit(10)
+            proveedores = models_api.RankingProveedores.select().order_by(models_api.RankingProveedores.monto.desc())
 
             response = {
-                'top_proveedores': [proveedor for proveedor in top_proveedores.dicts()]
+                'proveedores': [
+                    {
+                        'id': proveedor['empresa'],
+                        'nombre': proveedor['nombre_empresa'],
+                        'rut': proveedor['rut_sucursal'],
+                        'monto': int(proveedor['monto'])
+                    }
+                for proveedor in proveedores.dicts().iterator()]
             }
 
             resp.body = json.dumps(response, cls=JSONEncoderPlus)
 
         elif datatype in ['categoria', 'categorias']:
 
-            top_categorias = CategoriaMonto.select(
-                CategoriaMonto.categoria_tercer_nivel.alias('categoria'),
-                cast(CategoriaMonto.monto, 'bigint')
-            ).order_by(
-                CategoriaMonto.monto.desc()
-            ).limit(5)
+            categorias = models_api.RankingCategorias.select().order_by(models_api.RankingCategorias.monto.desc())
 
             response = {
-                'top_categorias': [categoria for categoria in top_categorias.dicts()]
+                'categorias': [
+                    {
+                        'id': categoria['id_categoria_nivel3'],
+                        'nombre': categoria['categoria_nivel3'],
+                        'monto': int(categoria['monto'])
+                    }
+                for categoria in categorias.dicts().iterator()]
             }
 
             resp.body = json.dumps(response, cls=JSONEncoderPlus)

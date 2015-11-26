@@ -28,4 +28,3 @@ CREATE INDEX ts_comprador_nombre_unidad ON bkn.comprador USING GIN (to_tsvector(
 
 CREATE INDEX ts_proveedor_nombre ON bkn.proveedor USING GIN (to_tsvector('spanish', nombre));
 CREATE INDEX ts_proveedor_rut ON bkn.proveedor USING GIN (to_tsvector('spanish', rut));
-
