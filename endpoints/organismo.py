@@ -282,6 +282,9 @@ class Organismo(object):
 
         if filtros:
 
+            if len(filtros) > 5:
+                raise falcon.HTTPBadRequest("Filtros incorrectos", "Demasiados filtros. Maximo 5.")
+
             for index, filtro in enumerate(filtros):
 
                 if index > 0:

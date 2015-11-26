@@ -282,6 +282,9 @@ class Proveedor(object):
 
             for index, filtro in enumerate(filtros):
 
+                if len(filtros) > 5:
+                    raise falcon.HTTPBadRequest("Filtros incorrectos", "Demasiados filtros. Maximo 5.")
+
                 if index > 0:
                     pre_organismos = [organismo['id'] for organismo in json.loads(resp.body)['proveedores']]
                     if not pre_organismos:
