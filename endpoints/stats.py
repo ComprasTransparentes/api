@@ -2,24 +2,24 @@ from io import BytesIO
 import json
 
 import falcon
+import peewee
 import unicodecsv as csv
 
 from playhouse.shortcuts import model_to_dict, cast
 
 from models import models_api
-from models.models_stats import *
-from models import models_bkn
+from models import models_stats
 from utils.myjson import JSONEncoderPlus
 
 
 class StatsItem(object):
 
-    @database.atomic()
+    @models_stats.database.atomic()
     def on_get(self, req, resp, datatype=None):
 
         if datatype == '0':
 
-            stats = Sumario.select().first()
+            stats = models_stats.Sumario.select().first()
 
             response = model_to_dict(stats)
 
@@ -27,11 +27,11 @@ class StatsItem(object):
 
         elif datatype == '1':
 
-            gasto_organismos = MinisterioOrganismoMonto.select(
-                MinisterioOrganismoMonto.nombre_ministerio.concat('-').concat(MinisterioOrganismoMonto.nombre_organismo).alias('nombre'),
-                cast(MinisterioOrganismoMonto.monto, 'bigint').alias('monto')
+            gasto_organismos = models_stats.MinisterioOrganismoMonto.select(
+                models_stats.MinisterioOrganismoMonto.nombre_ministerio.concat('-').concat(models_stats.MinisterioOrganismoMonto.nombre_organismo).alias('nombre'),
+                cast(models_stats.MinisterioOrganismoMonto.monto, 'bigint').alias('monto')
             ).order_by(
-                SQL('nombre')
+                peewee.SQL('nombre')
             )
 
             output = BytesIO()
@@ -50,7 +50,7 @@ class StatsItem(object):
 
 class StatsTop(object):
 
-    @database.atomic()
+    @models_api.database.atomic()
     def on_get(self, req, resp, datatype=None):
 
         if datatype in ['licitacion', 'licitaciones']:

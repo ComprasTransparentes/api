@@ -327,7 +327,7 @@ class OrganismoEmbed(object):
             'id': organismo.id_organismo,
 
             'categoria': organismo.nombre_ministerio,
-            'nombre': organismo.nombre_ministerio,
+            'nombre': organismo.nombre_organismo,
 
             'stats': {
                 'n_licitaciones_publicadas': organismo.licitaciones_publicadas,
