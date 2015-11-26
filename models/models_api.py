@@ -168,6 +168,15 @@ class Catnivel3(BaseModelPublic):
     class Meta:
         db_table = 'catnivel3'
 
+
+class MinisterioMr(BaseModelPublic):
+    id_ministerio = PrimaryKeyField()
+    nombre_ministerio = CharField()
+
+    class Meta:
+        db_table = 'ministerio_mr'
+
+
 class RankingCategorias(BaseModelAPI):
     categoria_nivel3 = CharField(null=True)
     id_categoria_nivel3 = IntegerField(null=True)
@@ -180,6 +189,8 @@ class RankingCategorias(BaseModelAPI):
 class RankingOrganismos(BaseModelAPI):
     monto = DecimalField(null=True)
     nombre_organismo = CharField(null=True)
+    id_ministerio = IntegerField(null=True)
+    nombre_ministerio = CharField(null=True)
     organismo = IntegerField(db_column='organismo_id', null=True)
 
     class Meta:
@@ -188,11 +199,22 @@ class RankingOrganismos(BaseModelAPI):
 
 class RankingProveedores(BaseModelAPI):
     empresa = IntegerField(db_column='empresa_id', null=True)
+    nombre_empresa = CharField(null=True)
     monto = DecimalField(null=True)
     rut_sucursal = CharField(null=True)
 
     class Meta:
         db_table = 'ranking_proveedores'
+        primary_key = False
+
+class LicitacionesCategorias(BaseModelAPI):
+    codigo_licitacion = CharField(null=True)
+    licitacion = IntegerField(db_column='licitacion_id', null=True)
+    monto = DecimalField(null=True)
+    nombre_licitacion = TextField(null=True)
+
+    class Meta:
+        db_table = 'licitaciones_categorias'
         primary_key = False
 
 

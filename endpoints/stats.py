@@ -53,24 +53,19 @@ class StatsTop(object):
     @database.atomic()
     def on_get(self, req, resp, datatype=None):
 
-
-
         if datatype in ['licitacion', 'licitaciones']:
 
-            top_licitaciones = LicitacionMonto.select(
-                models_bkn.Licitacion.id,
-                models_bkn.Licitacion.codigo,
-                models_bkn.Licitacion.nombre,
-                cast(LicitacionMonto.monto, 'bigint')
-            ).join(
-                models_bkn.Licitacion,
-                on=(LicitacionMonto.licitacion_codigo == models_bkn.Licitacion.codigo)
-            ).order_by(
-                LicitacionMonto.monto.desc()
-            ).limit(5)
+            licitaciones = models_api.LicitacionesCategorias.select().order_by(models_api.LicitacionesCategorias.monto.desc())
 
             response = {
-                'top_licitaciones': [licitacion for licitacion in top_licitaciones.dicts()]
+                'licitaciones': [
+                    {
+                        'id': licitacion['licitacion'],
+                        'codigo': licitacion['codigo_licitacion'],
+                        'nombre': licitacion['nombre_licitacion'],
+                        'monto': int(licitacion['monto'])
+                    }
+                for licitacion in licitaciones.dicts().iterator()]
             }
 
             resp.body = json.dumps(response, cls=JSONEncoderPlus)
@@ -99,7 +94,7 @@ class StatsTop(object):
                 'proveedores': [
                     {
                         'id': proveedor['empresa'],
-                        'nombre': 'Proveedor',
+                        'nombre': proveedor['nombre_empresa'],
                         'rut': proveedor['rut_sucursal'],
                         'monto': int(proveedor['monto'])
                     }
@@ -110,7 +105,7 @@ class StatsTop(object):
 
         elif datatype in ['categoria', 'categorias']:
 
-            categorias = models_api.RankingCategorias.select().order_by(models_api.RankingCategorias.monto)
+            categorias = models_api.RankingCategorias.select().order_by(models_api.RankingCategorias.monto.desc())
 
             response = {
                 'categorias': [

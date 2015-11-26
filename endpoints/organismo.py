@@ -224,6 +224,8 @@ class Organismo(object):
                     filter_monto_adjudicado
                 ).alias('organismos_montos')
 
+                selects.append(organismos_montos.c.monto_adjudicado)
+
                 joins.append([
                     organismos_montos,
                     peewee.JOIN_INNER,
@@ -232,7 +234,8 @@ class Organismo(object):
 
                 q_orden = req.params.get('orden', None)
                 if q_orden == 'monto_adjudicado':
-                    selects.append(organismos_montos.c.monto_adjudicado)
+                    order_bys.append(organismos_montos.c.monto_adjudicado.asc())
+                elif q_orden == '-monto_adjudicado':
                     order_bys.append(organismos_montos.c.monto_adjudicado.desc())
 
         # Build query
@@ -248,8 +251,6 @@ class Organismo(object):
 
         organismos = organismos.distinct()
 
-        print organismos.sql()[0] % tuple(organismos.sql()[1])
-
         n_organismos = organismos.count()
 
         # Get page
@@ -264,7 +265,9 @@ class Organismo(object):
                 {
                     'id': organismo['organismo'],
                     'categoria': organismo['nombre_ministerio'],
-                    'nombre': organismo['nombre_organismo']
+                    'nombre': organismo['nombre_organismo'],
+
+                    'monto_adjudicado': int(organismo['monto_adjudicado']) if 'monto_adjudicado' in organismo else None
                 }
             for organismo in organismos.dicts().iterator()]
         }
@@ -359,13 +362,15 @@ class OrganismoIdLicitacion(object):
             models_api.Licitacion.fecha_publicacion.desc()
         )
 
+        n_licitaciones = licitaciones.count()
+
         q_pagina = req.params.get('pagina', None)
         if q_pagina:
             q_pagina = max(int(q_pagina) if q_pagina.isdigit() else 1, 1)
             licitaciones = licitaciones.paginate(q_pagina, 10)
 
         response = {
-            'n_licitaciones': licitaciones.count(),
+            'n_licitaciones': n_licitaciones,
             'licitaciones': [
                 {
                     'id': licitacion['id_licitacion'],

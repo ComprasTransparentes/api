@@ -49,6 +49,7 @@ class Proveedor(object):
     organismo_adjudicador
     n_licitaciones_adjudicadas  (group by)
     monto_adjudicado            (group by)
+    orden
     """
 
     @models_api.database.atomic()
@@ -221,6 +222,8 @@ class Proveedor(object):
                     filter_monto_adjudicado
                 ).alias('proveedores_montos')
 
+                selects.append(proveedores_montos.c.monto_adjudicado)
+
                 joins.append([
                     proveedores_montos,
                     peewee.JOIN_INNER,
@@ -229,7 +232,8 @@ class Proveedor(object):
 
                 q_orden = req.params.get('orden', None)
                 if q_orden == 'monto_adjudicado':
-                    selects.append(proveedores_montos.c.monto_adjudicado)
+                    order_bys.append(proveedores_montos.c.monto_adjudicado.asc())
+                elif q_orden == '-monto_adjudicado':
                     order_bys.append(proveedores_montos.c.monto_adjudicado.desc())
 
         # Build query
@@ -244,8 +248,6 @@ class Proveedor(object):
             proveedores = proveedores.order_by(*order_bys)
 
         proveedores = proveedores.distinct()
-
-        print proveedores.sql()[0] % tuple(proveedores.sql()[1])
 
         n_proveedores = proveedores.count()
 
@@ -262,6 +264,8 @@ class Proveedor(object):
                     'id': proveedor['empresa'],
                     'nombre': proveedor['nombre_empresa'],
                     'rut': proveedor['rut_sucursal'],
+
+                    'monto_adjudicado': int(proveedor['monto_adjudicado']) if 'monto_adjudicado' in proveedor else None
                 }
             for proveedor in proveedores.dicts()]
         }
@@ -355,13 +359,15 @@ class ProveedorIdLicitacion(object):
             models_api.Licitacion.fecha_adjudicacion.desc()
         )
 
+        n_licitaciones = licitaciones.count()
+
         q_pagina = req.params.get('pagina', None)
         if q_pagina:
             q_pagina = max(int(q_pagina) if q_pagina.isdigit() else 1, 1)
             licitaciones = licitaciones.paginate(q_pagina, 10)
 
         response = {
-            'n_licitaciones': licitaciones.count(),
+            'n_licitaciones': n_licitaciones,
             'licitaciones': [
                 {
                     'id': licitacion['id_licitacion'],

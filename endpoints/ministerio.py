@@ -1,6 +1,7 @@
 import json
 
 import falcon
+import peewee
 
 from models import models_api
 from utils.myjson import JSONEncoderPlus
@@ -66,7 +67,7 @@ class MinisterioCategoria(object):
 
         filters = []
 
-        q_ministerio = req.params.get('ministerio', None)
+        q_ministerio = req.params.get('ministerio', [])
         if q_ministerio:
             if isinstance(q_ministerio, basestring):
                 q_ministerio = [q_ministerio]
@@ -75,17 +76,25 @@ class MinisterioCategoria(object):
             except ValueError:
                 raise falcon.HTTPBadRequest("Parametro incorrecto", "ministerio debe ser un entero")
 
-            filters.append(models_api.Comparador.id_ministerio << q_ministerio)
+            filters.extend([models_api.Comparador.id_ministerio << q_ministerio])
 
         categorias = models_api.Comparador.select(
             models_api.Comparador.id_categoria_nivel1,
-            models_api.Comparador.categoria_nivel1
+            models_api.Comparador.categoria_nivel1,
+            peewee.fn.count(models_api.Comparador.id_categoria_nivel1)
         ).where(
             models_api.Comparador.categoria_nivel1.is_null(False),
             *filters
+        ).group_by(
+            models_api.Comparador.id_categoria_nivel1,
+            models_api.Comparador.categoria_nivel1
+        ).having(
+            peewee.fn.count(models_api.Comparador.id_categoria_nivel1) >= len(q_ministerio)
         ).order_by(
             models_api.Comparador.id_categoria_nivel1
         ).distinct()
+
+        print categorias.sql()[0] % tuple(categorias.sql()[1])
 
         response = {
             'n_categorias': categorias.count(),
@@ -165,16 +174,16 @@ class MinisterioIdCategoriaIdStats(object):
                 'n_proveedores': stats.proveed_favorecidos
             }
         else:
-            try:
+            # try:
                 response = {
-                    'categoria': {
-                        "id": categoria_id,
-                        "nombre": models_api.Comparador.get(models_api.Comparador.id_categoria_nivel1 == categoria_id).categoria_nivel1,
-                    },
-
                     'ministerio': {
                         'id': ministerio_id,
-                        'nombre': models_api.Comparador.get(models_api.Comparador.id_ministerio == categoria_id).nombre_ministerio,
+                        'nombre': models_api.MinisterioMr.get(models_api.MinisterioMr.id_ministerio == ministerio_id).nombre_ministerio,
+                    },
+
+                    'categoria': {
+                        "id": categoria_id,
+                        "nombre": models_api.Catnivel1.get(models_api.Catnivel1.id_categoria_nivel1 == categoria_id).categoria_nivel1,
                     },
 
                     'monto_promedio': 0,
@@ -182,9 +191,9 @@ class MinisterioIdCategoriaIdStats(object):
                     'n_licitaciones_adjudicadas': 0,
                     'n_proveedores': 0
                 }
-            except models_api.Comparador.DoesNotExist as e:
-                raise falcon.HTTPNotFound()
-            except:
-                raise falcon.HTTPBadRequest("", "")
+            # except models_api.Comparador.DoesNotExist as e:
+            #     raise falcon.HTTPNotFound()
+            # except:
+            #     raise falcon.HTTPBadRequest("", "")
 
         resp.body = json.dumps(response, cls=JSONEncoderPlus, sort_keys=True)

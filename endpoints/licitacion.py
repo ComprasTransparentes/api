@@ -126,13 +126,14 @@ class Licitacion(object):
         # Obtener todas las licitacion
         licitaciones = models_api.Licitacion.select()
 
-        filters = []
+        wheres = []
+        order_bys = []
 
         # Busqueda de texto
         q_q = req.params.get('q', None)
         if q_q:
             # TODO Try to make just one query over one index instead of two or more ORed queries
-            filters.append(ts_match(models_api.Licitacion.nombre_licitacion, q_q) | ts_match(models_api.Licitacion.descripcion_licitacion, q_q))
+            wheres.append(ts_match(models_api.Licitacion.nombre_licitacion, q_q) | ts_match(models_api.Licitacion.descripcion_licitacion, q_q))
 
         # Busqueda por categoria de producto
         q_categoria_producto = req.params.get('categoria_producto', None)
@@ -145,7 +146,7 @@ class Licitacion(object):
             except ValueError:
                 raise falcon.HTTPBadRequest("Parametro incorrecto", "categoria_producto debe ser un entero")
 
-            filters.append(models_api.Licitacion.id_categoria_nivel1.contains_any(q_categoria_producto))
+            wheres.append(models_api.Licitacion.id_categoria_nivel1.contains_any(q_categoria_producto))
 
         # Busqueda por  producto
         q_producto = req.params.get('producto', None)
@@ -158,7 +159,7 @@ class Licitacion(object):
             except ValueError:
                 raise falcon.HTTPBadRequest("Parametro incorrecto", "producto debe ser un entero")
 
-            filters.append(models_api.Licitacion.id_categoria_nivel3.contains_any(q_producto))
+            wheres.append(models_api.Licitacion.id_categoria_nivel3.contains_any(q_producto))
 
         # Busqueda por estado
         q_estado = req.params.get('estado', None)
@@ -171,7 +172,7 @@ class Licitacion(object):
             except ValueError:
                 raise falcon.HTTPBadRequest("Parametro incorrecto", "estado debe ser un entero")
 
-            filters.append(models_api.Licitacion.estado << q_estado)
+            wheres.append(models_api.Licitacion.estado << q_estado)
 
         # Busqueda por organismo
         q_organismo = req.params.get('organismo', None)
@@ -184,7 +185,7 @@ class Licitacion(object):
             except ValueError:
                 raise falcon.HTTPBadRequest("Parametro incorrecto", "organismo debe ser un entero")
 
-            filters.append(models_api.Licitacion.id_organismo << q_organismo)
+            wheres.append(models_api.Licitacion.id_organismo << q_organismo)
 
         # Busqueda por proveedor
         q_proveedor = req.params.get('proveedor', None)
@@ -197,7 +198,7 @@ class Licitacion(object):
             except ValueError:
                 raise falcon.HTTPBadRequest("Parametro incorrecto", "proveedor debe ser un entero")
 
-            filters.append(models_api.Licitacion.empresas_ganadoras.contains_any(q_proveedor))
+            wheres.append(models_api.Licitacion.empresas_ganadoras.contains_any(q_proveedor))
 
         # Busqueda por monto
         q_monto = req.params.get('monto', None)
@@ -224,7 +225,7 @@ class Licitacion(object):
                     filter_monto.append(models_api.Licitacion.monto_total <= monto_max)
 
             if filter_monto:
-                filters.append(reduce(operator.or_, filter_monto))
+                wheres.append(reduce(operator.or_, filter_monto))
 
         # Busqueda por fecha de publicacion
         q_fecha_publicacion = req.params.get('fecha_publicacion', None)
@@ -251,7 +252,7 @@ class Licitacion(object):
                     filter_fecha_publicacion.append(models_api.Licitacion.fecha_publicacion <= fecha_publicacion_max)
 
             if filter_fecha_publicacion:
-                filters.append(reduce(operator.or_, filter_fecha_publicacion))
+                wheres.append(reduce(operator.or_, filter_fecha_publicacion))
 
         # Busqueda por fecha de cierre
         q_fecha_cierre = req.params.get('fecha_cierre', None)
@@ -278,7 +279,7 @@ class Licitacion(object):
                     filter_fecha_cierre.append(models_api.Licitacion.fecha_cierre <= fecha_cierre_max)
 
             if filter_fecha_cierre:
-                filters.append(reduce(operator.or_, filter_fecha_cierre))
+                wheres.append(reduce(operator.or_, filter_fecha_cierre))
 
         # Busqueda por fecha de adjudicacion
         q_fecha_adjudicacion = req.params.get('fecha_adjudicacion', None)
@@ -305,17 +306,27 @@ class Licitacion(object):
                     filter_fecha_adjudicacion.append(models_api.Licitacion.fecha_adjudicacion <= fecha_adjudicacion_max)
 
             if filter_fecha_adjudicacion:
-                filters.append(reduce(operator.or_, filter_fecha_adjudicacion))
-
-        if filters:
-            licitaciones = licitaciones.where(*filters)
+                wheres.append(reduce(operator.or_, filter_fecha_adjudicacion))
 
         q_orden = req.params.get('orden', None)
         if q_orden:
             if q_orden == 'monto':
-                licitaciones = licitaciones.order_by(models_api.Licitacion.monto_total.desc())
-            if q_orden == 'fecha_publicacion':
-                licitaciones = licitaciones.order_by(models_api.Licitacion.fecha_publicacion.desc())
+                wheres.append(models_api.Licitacion.monto_total.is_null(False))
+                order_bys.append(models_api.Licitacion.monto_total.asc())
+            elif q_orden == '-monto':
+                wheres.append(models_api.Licitacion.monto_total.is_null(False))
+                order_bys.append(models_api.Licitacion.monto_total.desc())
+            elif q_orden == 'fecha_publicacion':
+                wheres.append(models_api.Licitacion.fecha_publicacion.is_null(False))
+                order_bys.append(models_api.Licitacion.fecha_publicacion.asc())
+            elif q_orden == '-fecha_publicacion':
+                wheres.append(models_api.Licitacion.fecha_publicacion.is_null(False))
+                order_bys.append(models_api.Licitacion.fecha_publicacion.desc())
+
+        if wheres:
+            licitaciones = licitaciones.where(*wheres)
+        if order_bys:
+            licitaciones = licitaciones.order_by(*order_bys)
 
         # Get page
         q_pagina = req.params.get('pagina', '1')
@@ -375,10 +386,16 @@ class LicitacionIdItem(object):
         except models_api.Licitacion.DoesNotExist:
             raise falcon.HTTPNotFound()
 
-        print items.sql()
+        n_items = items.count()
+
+        # Get page
+        q_page = req.params.get('pagina', None)
+        if q_page:
+            q_page = max(int(q_page) if q_page.isdigit() else 1, 1)
+            items = items.paginate(q_page, 10)
 
         response = {
-            'n_items': items.count(),
+            'n_items': n_items,
             'items': [
                 {
                     'adjudicacion': {
