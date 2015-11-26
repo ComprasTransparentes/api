@@ -6,6 +6,7 @@ import unicodecsv as csv
 
 from playhouse.shortcuts import model_to_dict, cast
 
+from models import models_api
 from models.models_stats import *
 from models import models_bkn
 from utils.myjson import JSONEncoderPlus
@@ -38,8 +39,6 @@ class StatsItem(object):
 
             for go in gasto_organismos.tuples():
                 csvwriter.writerow(go if len(go) == 4 else go+('null', 'null'))
-            # for go in gasto_organismo_region_anos.tuples():
-            #     csvwriter.writerow(go)
 
             resp.content_type = 'text/csv'
             output.seek(0)
@@ -53,6 +52,8 @@ class StatsTop(object):
 
     @database.atomic()
     def on_get(self, req, resp, datatype=None):
+
+
 
         if datatype in ['licitacion', 'licitaciones']:
 
@@ -74,37 +75,51 @@ class StatsTop(object):
 
             resp.body = json.dumps(response, cls=JSONEncoderPlus)
 
-        elif datatype in ['proveedor', 'proveedores']:
+        elif datatype in ['organismo', 'organismos']:
 
-            top_proveedores = ProveedorMonto.select(
-                models_bkn.Proveedor.id,
-                models_bkn.Proveedor.nombre,
-                models_bkn.Proveedor.rut,
-                cast(ProveedorMonto.monto, 'bigint').alias('monto')
-            ).join(
-                models_bkn.Proveedor,
-                on=(ProveedorMonto.company == models_bkn.Proveedor.id)
-            ).order_by(
-                ProveedorMonto.monto.desc()
-            ).limit(10)
+            organismos = models_api.RankingOrganismos.select().order_by(models_api.RankingOrganismos.monto.desc())
 
             response = {
-                'top_proveedores': [proveedor for proveedor in top_proveedores.dicts()]
+                'organismos': [
+                    {
+                        'id': organismo['organismo'],
+                        'nombre': organismo['nombre_organismo'],
+                        'monto': int(organismo['monto'])
+                    }
+                for organismo in organismos.dicts().iterator()]
+            }
+
+            resp.body = json.dumps(response, cls=JSONEncoderPlus)
+
+        elif datatype in ['proveedor', 'proveedores']:
+
+            proveedores = models_api.RankingProveedores.select().order_by(models_api.RankingProveedores.monto.desc())
+
+            response = {
+                'proveedores': [
+                    {
+                        'id': proveedor['empresa'],
+                        'nombre': 'Proveedor',
+                        'rut': proveedor['rut_sucursal'],
+                        'monto': int(proveedor['monto'])
+                    }
+                for proveedor in proveedores.dicts().iterator()]
             }
 
             resp.body = json.dumps(response, cls=JSONEncoderPlus)
 
         elif datatype in ['categoria', 'categorias']:
 
-            top_categorias = CategoriaMonto.select(
-                CategoriaMonto.categoria_tercer_nivel.alias('categoria'),
-                cast(CategoriaMonto.monto, 'bigint')
-            ).order_by(
-                CategoriaMonto.monto.desc()
-            ).limit(5)
+            categorias = models_api.RankingCategorias.select().order_by(models_api.RankingCategorias.monto)
 
             response = {
-                'top_categorias': [categoria for categoria in top_categorias.dicts()]
+                'categorias': [
+                    {
+                        'id': categoria['id_categoria_nivel3'],
+                        'nombre': categoria['categoria_nivel3'],
+                        'monto': int(categoria['monto'])
+                    }
+                for categoria in categorias.dicts().iterator()]
             }
 
             resp.body = json.dumps(response, cls=JSONEncoderPlus)

@@ -167,3 +167,32 @@ class Catnivel3(BaseModelPublic):
 
     class Meta:
         db_table = 'catnivel3'
+
+class RankingCategorias(BaseModelAPI):
+    categoria_nivel3 = CharField(null=True)
+    id_categoria_nivel3 = IntegerField(null=True)
+    monto = DecimalField(null=True)
+
+    class Meta:
+        db_table = 'ranking_categorias'
+        primary_key = False
+
+class RankingOrganismos(BaseModelAPI):
+    monto = DecimalField(null=True)
+    nombre_organismo = CharField(null=True)
+    organismo = IntegerField(db_column='organismo_id', null=True)
+
+    class Meta:
+        db_table = 'ranking_organismos'
+        primary_key = False
+
+class RankingProveedores(BaseModelAPI):
+    empresa = IntegerField(db_column='empresa_id', null=True)
+    monto = DecimalField(null=True)
+    rut_sucursal = CharField(null=True)
+
+    class Meta:
+        db_table = 'ranking_proveedores'
+        primary_key = False
+
+

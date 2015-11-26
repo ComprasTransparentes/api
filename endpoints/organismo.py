@@ -56,20 +56,20 @@ class Organismo(object):
     @models_api.database.atomic()
     def on_get(self, req, resp):
 
-        # Get all organismos
-        organismos = models_api.ProveedorOrganismoCruce.select(
+        selects = [
             models_api.ProveedorOrganismoCruce.organismo,
             models_api.ProveedorOrganismoCruce.nombre_ministerio,
             models_api.ProveedorOrganismoCruce.nombre_organismo
-        )
-
-        filters = []
+        ]
+        wheres = []
+        joins = []
+        order_bys = []
 
         # Busqueda de texto
         q_q = req.params.get('q', None)
         if q_q:
             # TODO Try to make just one query over one index instead of two or more ORed queries
-            filters.append(ts_match(models_api.ProveedorOrganismoCruce.nombre_ministerio, q_q) | ts_match(models_api.ProveedorOrganismoCruce.nombre_organismo, q_q))
+            wheres.append(ts_match(models_api.ProveedorOrganismoCruce.nombre_ministerio, q_q) | ts_match(models_api.ProveedorOrganismoCruce.nombre_organismo, q_q))
 
         q_organismo = req.params.get('organismo', None)
         if q_organismo:
@@ -81,7 +81,7 @@ class Organismo(object):
             except ValueError:
                 raise falcon.HTTPBadRequest("Parametro incorrecto", "organismo debe ser un entero")
 
-            filters.append(models_api.ProveedorOrganismoCruce.organismo << q_organismo)
+            wheres.append(models_api.ProveedorOrganismoCruce.organismo << q_organismo)
 
 
         # Busqueda por fecha de adjudicacion
@@ -109,7 +109,7 @@ class Organismo(object):
                     filter_fecha_adjudicacion.append(models_api.ProveedorOrganismoCruce.fecha_adjudicacion <= fecha_adjudicacion_max)
 
             if filter_fecha_adjudicacion:
-                filters.append(reduce(operator.or_, filter_fecha_adjudicacion))
+                wheres.append(reduce(operator.or_, filter_fecha_adjudicacion))
 
         # Search by proveedor_adjudicado
         q_proveedor_adjudicado = req.params.get('proveedor_adjudicado', None)
@@ -122,7 +122,7 @@ class Organismo(object):
             except ValueError:
                 raise falcon.HTTPBadRequest("Parametro incorrecto", "proveedor_adjudicado debe ser un entero")
 
-            filters.append(models_api.ProveedorOrganismoCruce.empresa << q_proveedor_adjudicado)
+            wheres.append(models_api.ProveedorOrganismoCruce.empresa << q_proveedor_adjudicado)
 
         # Search by n_licitaciones_adjudicadas
         q_n_licitaciones_adjudicadas = req.params.get('n_licitaciones_adjudicadas')
@@ -141,16 +141,16 @@ class Organismo(object):
                 except ValueError:
                     raise falcon.HTTPBadRequest("Parametro incorrecto", "n_licitaciones_adjudicadas debe ser un entero")
 
-                if n_licitaciones_adjudicadas_min and n_licitaciones_adjudicadas_max:
+                if n_licitaciones_adjudicadas_min is not None and n_licitaciones_adjudicadas_max is not None:
                     filter_n_licitaciones_adjudicadas.append(
                         (peewee.fn.count(peewee.SQL('DISTINCT licitacion_id')) >= n_licitaciones_adjudicadas_min) &
                         (peewee.fn.count(peewee.SQL('DISTINCT licitacion_id')) <= n_licitaciones_adjudicadas_max)
                     )
-                elif n_licitaciones_adjudicadas_min:
+                elif n_licitaciones_adjudicadas_min is not None:
                     filter_n_licitaciones_adjudicadas.append(
                         peewee.fn.count(peewee.SQL('DISTINCT licitacion_id')) >= n_licitaciones_adjudicadas_min
                     )
-                elif n_licitaciones_adjudicadas_max:
+                elif n_licitaciones_adjudicadas_max is not None:
                     filter_n_licitaciones_adjudicadas.append(
                         peewee.fn.count(peewee.SQL('DISTINCT licitacion_id')) <= n_licitaciones_adjudicadas_max
                     )
@@ -163,8 +163,8 @@ class Organismo(object):
                     peewee.fn.count(peewee.SQL('DISTINCT licitacion_id'))
                 )
 
-                if filters:
-                    organismos_n_licitaciones = organismos_n_licitaciones.where(*filters)
+                if wheres:
+                    organismos_n_licitaciones = organismos_n_licitaciones.where(*wheres)
 
                 organismos_n_licitaciones = organismos_n_licitaciones.group_by(
                     models_api.ProveedorOrganismoCruce.organismo
@@ -174,7 +174,7 @@ class Organismo(object):
 
                 organismos_ids = [organismo_n_licitaciones['organismo'] for organismo_n_licitaciones in organismos_n_licitaciones.dicts().iterator()]
 
-                filters.append(models_api.ProveedorOrganismoCruce.organismo << organismos_ids if organismos_ids else False)
+                wheres.append(models_api.ProveedorOrganismoCruce.organismo << organismos_ids if organismos_ids else False)
 
         # Search by monto_adjudicado
         q_monto_adjudicado = req.params.get('monto_adjudicado')
@@ -193,16 +193,16 @@ class Organismo(object):
                 except ValueError:
                     raise falcon.HTTPBadRequest("Parametro incorrecto", "monto_adjudicado debe ser un entero")
 
-                if monto_adjudicado_min and monto_adjudicado_max:
+                if monto_adjudicado_min is not None and monto_adjudicado_max is not None:
                     filter_monto_adjudicado.append(
                         (peewee.fn.sum(models_api.ProveedorOrganismoCruce.monto_total) >= monto_adjudicado_min) &
                         (peewee.fn.sum(models_api.ProveedorOrganismoCruce.monto_total) <= monto_adjudicado_max)
                     )
-                elif monto_adjudicado_min:
+                elif monto_adjudicado_min is not None:
                     filter_monto_adjudicado.append(
                         peewee.fn.sum(models_api.ProveedorOrganismoCruce.monto_total) >= monto_adjudicado_min
                     )
-                elif monto_adjudicado_max:
+                elif monto_adjudicado_max is not None:
                     filter_monto_adjudicado.append(
                         peewee.fn.sum(models_api.ProveedorOrganismoCruce.monto_total) <= monto_adjudicado_max
                     )
@@ -212,35 +212,54 @@ class Organismo(object):
 
                 organismos_montos = models_api.ProveedorOrganismoCruce.select(
                     models_api.ProveedorOrganismoCruce.organismo,
-                    peewee.fn.sum(models_api.ProveedorOrganismoCruce.monto_total)
+                    peewee.fn.sum(models_api.ProveedorOrganismoCruce.monto_total).alias('monto_adjudicado')
                 )
 
-                if filters:
-                    organismos_montos = organismos_montos.where(*filters)
+                if wheres:
+                    organismos_montos = organismos_montos.where(*wheres)
 
                 organismos_montos = organismos_montos.group_by(
                     models_api.ProveedorOrganismoCruce.organismo
                 ).having(
                     filter_monto_adjudicado
-                )
+                ).alias('organismos_montos')
 
-                organismos_ids = [organismo_monto['organismo'] for organismo_monto in organismos_montos.dicts().iterator()]
+                joins.append([
+                    organismos_montos,
+                    peewee.JOIN_INNER,
+                    (models_api.ProveedorOrganismoCruce.organismo == organismos_montos.c.organismo_id)
+                ])
 
-                filters.append(models_api.ProveedorOrganismoCruce.organismo << organismos_ids if organismos_ids else peewee.SQL('FALSE'))
+                q_orden = req.params.get('orden', None)
+                if q_orden == 'monto_adjudicado':
+                    selects.append(organismos_montos.c.monto_adjudicado)
+                    order_bys.append(organismos_montos.c.monto_adjudicado.desc())
 
-        if filters:
-            organismos = organismos.where(*filters)
-            
+        # Build query
+        organismos = models_api.ProveedorOrganismoCruce.select(*selects)
+
+        if wheres:
+            organismos = organismos.where(*wheres)
+        if joins:
+            for join in joins:
+                organismos = organismos.join(*join)
+        if order_bys:
+            organismos = organismos.order_by(*order_bys)
+
         organismos = organismos.distinct()
+
+        print organismos.sql()[0] % tuple(organismos.sql()[1])
+
+        n_organismos = organismos.count()
 
         # Get page
         q_page = req.params.get('pagina', None)
         if q_page:
             q_page = max(int(q_page) if q_page.isdigit() else 1, 1)
-            organismos.paginate(q_page, 10)
+            organismos = organismos.paginate(q_page, 10)
 
         response = {
-            'n_organismos': organismos.count(),
+            'n_organismos': n_organismos,
             'organismos': [
                 {
                     'id': organismo['organismo'],

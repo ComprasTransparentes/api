@@ -66,14 +66,14 @@ class LicitacionId(object):
             },
 
             'estado': licitacion.estado,
-            'fecha_cabio_estado': licitacion.fecha_cambio_estado,
+            'fecha_cambio_estado': licitacion.fecha_cambio_estado,
 
             'fecha_creacion': licitacion.fecha_creacion,
             'fecha_publicacion': licitacion.fecha_publicacion,
             'fecha_inicio': licitacion.fecha_inicio,
             'fecha_final': licitacion.fecha_final,
             'fecha_cierre': licitacion.fecha_cierre,
-            'fecha_estimada_adjudicacion': licitacion.fecha_estimada_adjudicacion,
+            'fecha_adjudicacion': licitacion.fecha_adjudicacion,
 
             'n_items': licitacion.items_totales,
 
@@ -114,6 +114,10 @@ class Licitacion(object):
     fecha_publicacion
     fecha_cierre
     fecha_adjudicacion
+    organismo
+    proveedor
+
+    orden
     """
 
     @models_api.database.atomic()
@@ -168,6 +172,32 @@ class Licitacion(object):
                 raise falcon.HTTPBadRequest("Parametro incorrecto", "estado debe ser un entero")
 
             filters.append(models_api.Licitacion.estado << q_estado)
+
+        # Busqueda por organismo
+        q_organismo = req.params.get('organismo', None)
+        if q_organismo:
+            if isinstance(q_organismo, basestring):
+                q_organismo = [q_organismo]
+
+            try:
+                q_organismo = map(lambda x: int(x), q_organismo)
+            except ValueError:
+                raise falcon.HTTPBadRequest("Parametro incorrecto", "organismo debe ser un entero")
+
+            filters.append(models_api.Licitacion.id_organismo << q_organismo)
+
+        # Busqueda por proveedor
+        q_proveedor = req.params.get('proveedor', None)
+        if q_proveedor:
+            if isinstance(q_proveedor, basestring):
+                q_proveedor = [q_proveedor]
+
+            try:
+                q_proveedor = map(lambda x: int(x), q_proveedor)
+            except ValueError:
+                raise falcon.HTTPBadRequest("Parametro incorrecto", "proveedor debe ser un entero")
+
+            filters.append(models_api.Licitacion.empresas_ganadoras.contains_any(q_proveedor))
 
         # Busqueda por monto
         q_monto = req.params.get('monto', None)
@@ -279,6 +309,13 @@ class Licitacion(object):
 
         if filters:
             licitaciones = licitaciones.where(*filters)
+
+        q_orden = req.params.get('orden', None)
+        if q_orden:
+            if q_orden == 'monto':
+                licitaciones = licitaciones.order_by(models_api.Licitacion.monto_total.desc())
+            if q_orden == 'fecha_publicacion':
+                licitaciones = licitaciones.order_by(models_api.Licitacion.fecha_publicacion.desc())
 
         # Get page
         q_pagina = req.params.get('pagina', '1')
