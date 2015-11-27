@@ -81,7 +81,7 @@ class LicitacionId(object):
                 'n_items': licitacion.items_adjudicados,
                 'monto': int(licitacion.monto_total) if licitacion.monto_total else None,
                 'acta': licitacion.url_acta,
-            } if licitacion.url_acta else None, # Only if there is an acta
+            } if licitacion.monto_total else None, # Only if there is an monto_total
 
             'categorias': [
                 {
@@ -361,7 +361,7 @@ class Licitacion(object):
                         'n_items': licitacion['items_adjudicados'],
                         'monto': int(licitacion['monto_total']) if licitacion['monto_total'] else None,
                         'acta': licitacion['url_acta'],
-                    } if licitacion['url_acta'] else None, # Only if there is an acta
+                    } if licitacion['monto_total'] else None, # Only if there is monto_total
 
                 }
                 for licitacion in licitaciones.paginate(q_pagina, Licitacion.MAX_RESULTS).dicts()
