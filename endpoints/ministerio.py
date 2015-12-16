@@ -94,8 +94,6 @@ class MinisterioCategoria(object):
             models_api.Comparador.id_categoria_nivel1
         ).distinct()
 
-        print categorias.sql()[0] % tuple(categorias.sql()[1])
-
         response = {
             'n_categorias': categorias.count(),
             'categorias': [

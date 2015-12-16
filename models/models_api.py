@@ -218,3 +218,21 @@ class LicitacionesCategorias(BaseModelAPI):
         primary_key = False
 
 
+class MinisterioOrganismoMonto(BaseModelAPI):
+    monto = FloatField(null=True)
+    nombre_ministerio = CharField(null=True)
+    nombre_organismo = CharField(null=True)
+
+    class Meta:
+        db_table = 'ministerio_organismo_monto'
+
+
+class Sumario(BaseModelAPI):
+    monto_transado = IntegerField()
+    n_licitaciones = IntegerField()
+    n_organismos = IntegerField()
+    n_proveedores = IntegerField()
+
+    class Meta:
+        db_table = 'sumario'
+        primary_key = False

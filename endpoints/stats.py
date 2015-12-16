@@ -8,18 +8,17 @@ import unicodecsv as csv
 from playhouse.shortcuts import model_to_dict, cast
 
 from models import models_api
-from models import models_stats
 from utils.myjson import JSONEncoderPlus
 
 
 class StatsItem(object):
 
-    @models_stats.database.atomic()
+    @models_api.database.atomic()
     def on_get(self, req, resp, datatype=None):
 
         if datatype == '0':
 
-            stats = models_stats.Sumario.select().first()
+            stats = models_api.Sumario.select().first()
 
             response = model_to_dict(stats)
 
@@ -27,9 +26,9 @@ class StatsItem(object):
 
         elif datatype == '1':
 
-            gasto_organismos = models_stats.MinisterioOrganismoMonto.select(
-                models_stats.MinisterioOrganismoMonto.nombre_ministerio.concat('-').concat(models_stats.MinisterioOrganismoMonto.nombre_organismo).alias('nombre'),
-                cast(models_stats.MinisterioOrganismoMonto.monto, 'bigint').alias('monto')
+            gasto_organismos = models_api.MinisterioOrganismoMonto.select(
+                models_api.MinisterioOrganismoMonto.nombre_ministerio.concat('-').concat(models_api.MinisterioOrganismoMonto.nombre_organismo).alias('nombre'),
+                cast(models_api.MinisterioOrganismoMonto.monto, 'bigint').alias('monto')
             ).order_by(
                 peewee.SQL('nombre')
             )
