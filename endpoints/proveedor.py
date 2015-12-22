@@ -1,3 +1,4 @@
+# coding=utf-8
 import operator
 import json
 
@@ -11,16 +12,27 @@ from utils.mypeewee import ts_match
 
 
 class ProveedorId(object):
+    """Endpoint para un proveedor en particular, identificado por ID"""
 
     @models_api.database.atomic()
     def on_get(self, req, resp, proveedor_id):
+        """Obtiene la informacion de un proveedor en particular
 
+        ================   =======     ===============
+        Parámetro de URL   Ejemplo     Descripción
+        ================   =======     ===============
+        ``proveedor_id``   5           ID de proveedor
+        ================   =======     ===============
+        """
+
+        # Validar que proveedor_id es int
+        # TODO Delegar la validacion a la BD o raise HTTPBadRequest
         try:
             proveedor_id = int(proveedor_id)
         except ValueError:
             raise falcon.HTTPNotFound()
 
-        # Get the proveedor
+        # Obtener un proveedor
         try:
             proveedor = models_api.ProveedorStats.get(
                 models_api.ProveedorStats.empresa == proveedor_id
@@ -28,6 +40,7 @@ class ProveedorId(object):
         except models_api.ProveedorStats.DoesNotExist:
             raise falcon.HTTPNotFound()
 
+        # Construir la respuesta
         response = {
             'id': proveedor.empresa,
 
@@ -35,26 +48,56 @@ class ProveedorId(object):
             'rut': proveedor.rut_sucursal
         }
 
+        # Codificar la respuesta en JSON
         resp.body = json.dumps(response, cls=JSONEncoderPlus, sort_keys=True)
 
 
 class Proveedor(object):
+    """Endpoint para todos los proveedores"""
 
     MAX_RESULTS = 10
 
-    """
-    q
-    proveedor
-    fecha_adjudicacion
-    organismo_adjudicador
-    n_licitaciones_adjudicadas  (group by)
-    monto_adjudicado            (group by)
-    orden
-    """
-
     @models_api.database.atomic()
     def on_get(self, req, resp):
+        """Obtiene informacion de todos los proveedores.
 
+        Permite filtrar y paginar los resultados.
+
+        El paginamiento es de 10 elementos por pagina y es opcional.
+
+            **Nota**: Para usar un mismo filtro con diferentes valores, se debe usar el parametro tantas veces como
+            sea necesario. e.g.: `?proveedor=6&proveedor=8`. El filtro se aplicara usando la disyuncion de los
+            valores. i.e: ... `proveedor = 6 OR proveedor = 8`. El filtro ``q`` no puede ser usado de esta forma.
+
+            **Nota**: El campo `monto_adjudicado` de la respuesta solo tiene un valor si se ha usado el filtro
+            ``monto_adjudicado`` en el request, si no, es ``null``.
+
+        Los parametros aceptados son:
+
+        Filtros
+
+        ==============================  ==================  ============================================================
+        Parámetro                       Ejemplo             Descripción
+        ==============================  ==================  ============================================================
+        ``q``                           clavos y martillos  Busqueda de texto
+        ``proveedor``                   1                   Por ID de proveedor
+        ``fecha_adjudicacion``          20140101|20141231   Por fecha de adjudicacion de licitaciones
+        ``organismo_adjudicador``       1                   Por ID de organismos que han les concedido licitaciones
+        ``n_licitaciones_adjudicadas``  10|20               Por cantidad de licitaciones adjudicadas
+        ``monto_adjudicado``            10000|1000000       Por monto adjudicado en licitaciones
+        ==============================  ==================  ============================================================
+
+        Modificadores
+
+        ==============================  ================    ============================================================
+        Parámetro                       Ejemplo             Descripción
+        ==============================  ================    ============================================================
+        ``orden``                       monto_adjudicado    Ordenar los resultados
+        ``pagina``                      1                   Paginar y entregar la pagina solicitada
+        ==============================  ================    ============================================================
+        """
+
+        # Preparar los filtros y operaciones variables
         selects = [
             models_api.ProveedorOrganismoCruce.empresa,
             models_api.ProveedorOrganismoCruce.nombre_empresa,
@@ -67,22 +110,22 @@ class Proveedor(object):
         # Busqueda de texto
         q_q = req.params.get('q', None)
         if q_q:
-            # TODO Try to make just one query over one index instead of two or more ORed queries
+            # TODO Hacer esta consulta sobre un solo indice combinado en lugar de usar dos filtros separados por OR
             wheres.append(ts_match(models_api.ProveedorOrganismoCruce.nombre_empresa, q_q) | ts_match(models_api.ProveedorOrganismoCruce.rut_sucursal, q_q))
 
-        q_proveedor = req.params.get('organismo', None)
+        # Filtrar por proveedor
+        q_proveedor = req.params.get('proveedor', None)
         if q_proveedor:
             if isinstance(q_proveedor, basestring):
                 q_proveedor = [q_proveedor]
-
             try:
                 q_proveedor = map(lambda x: int(x), q_proveedor)
             except ValueError:
-                raise falcon.HTTPBadRequest("Parametro incorrecto", "organismo debe ser un entero")
+                raise falcon.HTTPBadRequest("Parametro incorrecto", "proveedor debe ser un entero")
 
             wheres.append(models_api.ProveedorOrganismoCruce.empresa << q_proveedor)
 
-        # Busqueda por fecha de adjudicacion
+        # Filtrar por fecha de adjudicacion
         q_fecha_adjudicacion = req.params.get('fecha_adjudicacion', None)
         if q_fecha_adjudicacion:
             if isinstance(q_fecha_adjudicacion, basestring):
@@ -109,7 +152,7 @@ class Proveedor(object):
             if filter_fecha_adjudicacion:
                 wheres.append(reduce(operator.or_, filter_fecha_adjudicacion))
 
-        # Search by organismo_adjudicador
+        # Filtrar por organismo_adjudicador
         q_organismo_adjudicador = req.params.get('organismo_adjudicador', None)
         if q_organismo_adjudicador:
             if isinstance(q_organismo_adjudicador, basestring):
@@ -122,7 +165,7 @@ class Proveedor(object):
 
             wheres.append(models_api.ProveedorOrganismoCruce.organismo << q_organismo_adjudicador)
 
-        # Search by n_licitaciones_adjudicadas
+        # Filtrar por n_licitaciones_adjudicadas
         q_n_licitaciones_adjudicadas = req.params.get('n_licitaciones_adjudicadas')
         if q_n_licitaciones_adjudicadas:
             if isinstance(q_n_licitaciones_adjudicadas, basestring):
@@ -174,7 +217,7 @@ class Proveedor(object):
 
                 wheres.append(models_api.ProveedorOrganismoCruce.empresa << proveedores_ids if proveedores_ids else False)
 
-        # Search by monto_adjudicado
+        # Filtrar por monto_adjudicado
         q_monto_adjudicado = req.params.get('monto_adjudicado')
         if q_monto_adjudicado:
             if isinstance(q_monto_adjudicado, basestring):
@@ -236,9 +279,10 @@ class Proveedor(object):
                 elif q_orden == '-monto_adjudicado':
                     order_bys.append(proveedores_montos.c.monto_adjudicado.desc())
 
-        # Build query
+        # Construir query
         proveedores = models_api.ProveedorOrganismoCruce.select(*selects)
 
+        # Aplicar filtros
         if wheres:
             proveedores = proveedores.where(*wheres)
         if joins:
@@ -251,12 +295,13 @@ class Proveedor(object):
 
         n_proveedores = proveedores.count()
 
-        # Get page
+        # Aplicar paginamiento
         q_page = req.params.get('pagina', None)
         if q_page:
             q_page = max(int(q_page) if q_page.isdigit() else 1, 1)
             proveedores = proveedores.paginate(q_page, 10)
 
+        # Construir la respuesta
         response = {
             'n_proveedores': n_proveedores,
             'proveedores': [
@@ -270,17 +315,30 @@ class Proveedor(object):
             for proveedor in proveedores.dicts()]
         }
 
+        # Codificar la respuesta en JSON
         resp.body = json.dumps(response, cls=JSONEncoderPlus, sort_keys=True)
 
 
     @models_api.database.atomic()
     def on_post(self, req, resp):
+        """Obtiene informacion de todos los proveedores usando la llamada a GET.
 
+        Este endpoint POST permite realizar consultas igual que el endpoint GET y ademas:
+        - No se ve afectado por el limite de tamano del querystring del enpoint GET
+        - Permite encadenar consultas. i.e.: aplicar fltros sobre el resultado de la consulta anterior.
+
+        :param req: Falcon request object
+        :param resp: Falcon response object
+        :return:
+        """
+
+        # Obtener contenido del request
         filtros = req.context['payload'].get('filtros', [])
 
         if not isinstance(filtros, list):
             raise falcon.HTTPBadRequest("Filtros incorrectos", "El campo filtros no esta presente")
 
+        # Delegar a on_get
         if len(filtros) == 0:
             self.on_get(req, resp)
         if len(filtros) <= 5:
@@ -296,6 +354,7 @@ class Proveedor(object):
                     else:
                         req.params['proveedor'] = pre_proveedores
 
+                # TODO Aceptar filtros con valores primitivos (int, floats, ...).
                 # for k, v in filtro.iteritems():
                 #     if isinstance(v, int):
                 #         filtro[k] = str(v)
@@ -316,16 +375,25 @@ class Proveedor(object):
 
 
 class ProveedorEmbed(object):
+    """Endpoint para la informacion resumida y estadisticas de un proveedor"""
 
     @models_api.database.atomic()
     def on_get(self, req, resp, proveedor_id):
+        """Obtiene la informacion resumida y estadisticas de un proveedor
 
+        :param req: Falcon request object
+        :param resp: Falcon response object
+        :param proveedor_id: ID del proveedor
+        :return:
+        """
+
+        # Validar organismo_id
         try:
             proveedor_id = int(proveedor_id)
         except ValueError:
             raise falcon.HTTPNotFound()
 
-        # Get the proveedor
+        # Obtener proveedor
         try:
             proveedor = models_api.ProveedorStats.get(
                 models_api.ProveedorStats.empresa == proveedor_id
@@ -333,6 +401,7 @@ class ProveedorEmbed(object):
         except Proveedor.DoesNotExist:
             raise falcon.HTTPNotFound()
 
+        # Construir la respuesta
         response = {
             'id': proveedor.empresa,
 
@@ -345,8 +414,10 @@ class ProveedorEmbed(object):
             }
         }
 
+        # Codificar la respuesta en JSON
         response = json.dumps(response, cls=JSONEncoderPlus, sort_keys=True)
 
+        # Codificar la respuesta en JSONP
         callback = req.params.get('callback', None)
         if callback:
             response = "%s(%s)" % (callback, response)
@@ -356,54 +427,78 @@ class ProveedorEmbed(object):
 
 # TODO 404 si organismo no existe
 class ProveedorIdLicitacion(object):
+    """Endpoint para las licitaciones de un proveedor"""
 
     @models_api.database.atomic()
     def on_get(self, req, resp, proveedor_id):
+        """Obtiene la lista de licitaciones de un proveedor en particular.
 
+        Permite paginar el resultado.
+
+        Permite paginar el resultado.
+
+        Modificadores
+
+        ==============================  ================    ============================================================
+        Parámetro                       Ejemplo             Descripción
+        ==============================  ================    ============================================================
+        ``pagina``                      1                   Paginar y entregar la pagina solicitada
+        ==============================  ================    ============================================================
+        """
+
+        # Validar organismo_id
+        # TODO Delegar la validacion a la BD o raise HTTPBadRequest
         try:
             proveedor_id = int(proveedor_id)
         except ValueError:
             raise falcon.HTTPNotFound()
 
+        # Construir la query
         licitaciones = models_api.Licitacion.filter(
             models_api.Licitacion.empresas_ganadoras.contains(proveedor_id)
         ).order_by(
             models_api.Licitacion.fecha_adjudicacion.desc()
         )
 
+        # Contar
+        # TODO Contar en python si es mas rapido que en SQL. Mantener paginacion.
         n_licitaciones = licitaciones.count()
 
+        # Aplicar paginacion
         q_pagina = req.params.get('pagina', None)
         if q_pagina:
             q_pagina = max(int(q_pagina) if q_pagina.isdigit() else 1, 1)
             licitaciones = licitaciones.paginate(q_pagina, 10)
 
+        # Construir la respuesta
         response = {
             'n_licitaciones': n_licitaciones,
             'licitaciones': [
                 {
+                    # Identificadores
                     'id': licitacion['id_licitacion'],
                     'codigo': licitacion['codigo_licitacion'],
-
+                    # Descriptores
                     'nombre': licitacion['nombre_licitacion'],
                     'descripcion': licitacion['descripcion_licitacion'],
-
+                    # Organismo emisor
                     'organismo': {
                         'id': licitacion['id_organismo'],
 
                         'categoria': licitacion['nombre_ministerio'],
                         'nombre': licitacion['nombre_organismo'],
                     },
-
+                    # Fechas
                     'fecha_publicacion': licitacion['fecha_publicacion'],
                     'fecha_cierre': licitacion['fecha_cierre'],
                     'fecha_adjudicacion': licitacion['fecha_adjudicacion'],
-
+                    # Estado
                     'estado': licitacion['estado'],
                     'fecha_cambio_estado': licitacion['fecha_cambio_estado'],
-
+                    # Items
+                    # El detalle de los items se encuentra en otro endpoint
                     'n_items': licitacion['items_totales'],
-
+                    # Adjudicacion
                     'adjudicacion': {
                         'n_items': licitacion['items_adjudicados'],
                         'monto': int(licitacion['monto_total']) if licitacion['monto_total'] else None,
@@ -414,4 +509,5 @@ class ProveedorIdLicitacion(object):
             ]
         }
 
+        # Codificar la respuesta en JSON
         resp.body = json.dumps(response, cls=JSONEncoderPlus, sort_keys=True)

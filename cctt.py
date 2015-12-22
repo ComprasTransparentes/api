@@ -1,3 +1,6 @@
+"""Compras Transparentes API
+"""
+
 import falcon
 
 from middlewares.cors import CorsMiddleware
@@ -11,10 +14,10 @@ from endpoints.ministerio import MinisterioId, Ministerio, MinisterioCategoria, 
 from endpoints.producto import Producto, ProductoCategoria
 from endpoints.stats import StatsItem, StatsTop
 
-# Create the falcon WSGI app
+# Crear la app (WSGI) de Falcon
 app = falcon.API(middleware=[CorsMiddleware(), PayloadParserMiddleware()])
 
-# Add routes
+# Agregar las rutas
 app.add_route('/licitacion/', Licitacion())
 app.add_route('/licitacion/{licitacion_id}', LicitacionId())
 app.add_route('/licitacion/{licitacion_id}/item', LicitacionIdItem())
@@ -29,7 +32,7 @@ app.add_route('/proveedor/{proveedor_id}', ProveedorId())
 app.add_route('/proveedor/{proveedor_id}/licitacion', ProveedorIdLicitacion())
 app.add_route('/proveedor/{proveedor_id}/embed', ProveedorEmbed())
 
-# No publicas
+# Las siguientes rutas no deben ser publicas, solo para el uso de comprastransparentes.cl
 # TODO Agregar prefijo CCTT
 
 app.add_route('/ministerio', Ministerio())
