@@ -182,6 +182,18 @@ class Licitacion(object):
             # TODO Hacer esta consulta sobre un solo indice combinado en lugar de usar dos filtros separados por OR
             wheres.append(ts_match(models_api.Licitacion.nombre_licitacion, q_q) | ts_match(models_api.Licitacion.descripcion_licitacion, q_q))
 
+        # Filtrar por id
+        q_id = req.params.get('id', None)
+        if q_id:
+            if isinstance(q_id, basestring):
+                q_id = [q_id]
+            try:
+                q_id = map(lambda x: int(x), q_id)
+            except ValueError:
+                raise falcon.HTTPBadRequest("Parametro incorrecto", "id debe ser un entero")
+
+            wheres.append(models_api.Licitacion.id_licitacion << q_id)
+
         # Filtrar por categoria de producto
         q_categoria_producto = req.params.get('categoria_producto', None)
         if q_categoria_producto:
@@ -369,6 +381,12 @@ class Licitacion(object):
             elif q_orden == '-fecha_publicacion':
                 wheres.append(models_api.Licitacion.fecha_publicacion.is_null(False))
                 order_bys.append(models_api.Licitacion.fecha_publicacion.desc())
+            elif q_orden == 'fecha_cierre':
+                wheres.append(models_api.Licitacion.fecha_publicacion.is_null(False))
+                order_bys.append(models_api.Licitacion.fecha_cierre.asc())
+            elif q_orden == '-fecha_cierre':
+                wheres.append(models_api.Licitacion.fecha_publicacion.is_null(False))
+                order_bys.append(models_api.Licitacion.fecha_cierre.desc())
 
         # Aplicar filtros
         if wheres:
